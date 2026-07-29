@@ -7,6 +7,7 @@ import {
   writeFile
 } from "node:fs/promises";
 import { build } from "esbuild";
+import path from "node:path";
 
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist", { recursive: true });
@@ -14,6 +15,9 @@ await build({
   entryPoints: ["src/index.ts"],
   outfile: "dist/mcpmender.cjs",
   bundle: true,
+  alias: {
+    "@mcpmender/core": path.resolve("../core/src/index.ts")
+  },
   platform: "node",
   format: "cjs",
   mainFields: ["module", "main"],

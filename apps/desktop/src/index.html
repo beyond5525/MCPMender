@@ -77,9 +77,20 @@
             >
               Tutorial & help
             </button>
+            <button
+              id="rollback-button"
+              class="button ghost"
+              data-i18n="desktop.rollbackHistory"
+            >
+              Backup history
+            </button>
             <div class="scan-feedback" id="scan-feedback" aria-live="polite">
               <span class="scan-feedback-dot" aria-hidden="true"></span>
               <span id="scan-status">Ready to scan</span>
+            </div>
+            <div id="probe-progress" class="probe-progress" hidden aria-live="polite">
+              <progress id="probe-progress-bar" value="0" max="1"></progress>
+              <span id="probe-progress-text"></span>
             </div>
           </div>
         </section>
@@ -88,6 +99,7 @@
           <div>
             <span data-i18n="workspace.label">Project diagnostics</span>
             <strong id="workspace-path" data-i18n="workspace.none">No project folder selected</strong>
+            <small id="storage-path" class="storage-path"></small>
           </div>
           <button id="workspace-button" class="button ghost" data-i18n="action.selectProject">
             Select project folder
@@ -124,7 +136,7 @@
           <span class="eyebrow">SAFE REPAIR</span>
           <h2 data-i18n="repair.previewTitle">Repair preview</h2>
         </div>
-        <button class="icon-button" id="dialog-close" aria-label="Close">×</button>
+        <button class="icon-button" id="dialog-close" data-i18n-aria-label="action.close" aria-label="Close">×</button>
       </div>
       <p data-i18n="repair.previewDetail">
         MCPMender will back up the original configuration before applying these low-risk changes.
@@ -150,7 +162,7 @@
           <span class="eyebrow">MCP HANDSHAKE</span>
           <h2 data-i18n="probe.previewTitle">Deep connection check</h2>
         </div>
-        <button class="icon-button" id="probe-dialog-close" aria-label="Close">×</button>
+        <button class="icon-button" id="probe-dialog-close" data-i18n-aria-label="action.close" aria-label="Close">×</button>
       </div>
       <p data-i18n="probe.previewDetail"></p>
       <div class="safety-callout" data-i18n="probe.safety"></div>
@@ -161,6 +173,30 @@
         </button>
         <button id="probe-confirm" class="button primary" data-i18n="probe.start">
           Start deep check
+        </button>
+      </div>
+    </dialog>
+
+    <dialog id="rollback-dialog">
+      <div class="dialog-header">
+        <div>
+          <span class="eyebrow">BACKUP HISTORY</span>
+          <h2 data-i18n="desktop.rollbackHistory">Backup history</h2>
+        </div>
+        <button
+          class="icon-button"
+          id="rollback-dialog-close"
+          data-i18n-aria-label="action.close"
+          aria-label="Close"
+        >×</button>
+      </div>
+      <p data-i18n="desktop.rollbackDetail">
+        Restore a configuration only when it has not changed since MCPMender repaired it.
+      </p>
+      <div id="rollback-list" class="repair-list"></div>
+      <div class="dialog-actions">
+        <button id="rollback-close" class="button ghost" data-i18n="action.close">
+          Close
         </button>
       </div>
     </dialog>

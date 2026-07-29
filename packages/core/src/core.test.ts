@@ -146,6 +146,67 @@ describe("scan and safe repair", () => {
     expect(rescanned.summary.safeRepairs).toBe(0);
   });
 
+  it("keeps finding and repair IDs unique for same-named servers in different configs", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-id-scope-"));
+    const configPaths = [
+      path.join(root, "private-user-config.json"),
+      path.join(root, "private-project-config.json")
+    ];
+    for (const configPath of configPaths) {
+      await writeFile(
+        configPath,
+        JSON.stringify({
+          mcpServers: {
+            demo: {
+              command: "npx",
+              args: ["-y", "@example/mcp"]
+            }
+          }
+        }),
+        "utf8"
+      );
+    }
+    const candidates: ConfigCandidate[] = configPaths.map((configPath) => ({
+      clientId: "cursor",
+      displayName: "Cursor",
+      path: configPath,
+      format: "jsonc"
+    }));
+
+    const first = await scanMcpConfigurations({
+      platform: "win32",
+      candidates
+    });
+    const second = await scanMcpConfigurations({
+      platform: "win32",
+      candidates
+    });
+    const repairIds = first.repairs.map((repair) => repair.id);
+    const findingIds = first.findings.map((finding) => finding.id);
+
+    expect(repairIds).toHaveLength(2);
+    expect(new Set(repairIds).size).toBe(repairIds.length);
+    expect(new Set(findingIds).size).toBe(findingIds.length);
+    expect(repairIds).toEqual(second.repairs.map((repair) => repair.id));
+    expect(findingIds).toEqual(second.findings.map((finding) => finding.id));
+    expect(repairIds).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^cursor:demo:wrap-npx:[a-f0-9]{12}$/)
+      ])
+    );
+    for (const id of [...repairIds, ...findingIds]) {
+      expect(id).not.toContain(root);
+      expect(id).not.toContain("private-user-config");
+      expect(id).not.toContain("private-project-config");
+    }
+
+    const result = await applySafeRepairs(first.repairs, {
+      backupRoot: path.join(root, "backups")
+    });
+    expect(result.results).toHaveLength(2);
+    expect(result.results.every((item) => item.applied)).toBe(true);
+  });
+
   it("uses platform-specific configuration paths", async () => {
     const report = await scanMcpConfigurations({
       platform: "darwin",

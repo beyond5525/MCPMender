@@ -29,4 +29,12 @@ commands or contacts configured endpoints, so review the preview first.
 
 Use `--lang en`, `--lang zh-CN`, or `--lang ja` with any command.
 
+Unknown options, missing values, and unmatched `--server` filters are rejected.
+Exit codes are:
+
+- `0`: completed without a blocking finding;
+- `1`: invalid input, unmatched filter, or runtime failure;
+- `2`: scan/probe error or authentication-required result;
+- `3`: at least one requested repair was skipped or failed.
+
 MCPMender is licensed under Apache-2.0.

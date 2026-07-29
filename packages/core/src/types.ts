@@ -26,10 +26,19 @@ export interface ServerDefinition {
   env?: Record<string, string>;
   envKeys?: string[];
   headers?: Record<string, string>;
+  headerEnv?: Record<string, string>;
+  bearerTokenEnvVar?: string;
+  inheritEnvKeys?: string[];
   hasHeaders?: boolean;
+  enabled?: boolean;
+  transport?: ProbeTransport;
+  variableSyntax?: "generic" | "gemini" | "opencode" | "vscode";
+  workspaceDir?: string;
+  unresolvedVariables?: string[];
+  repairCompatible?: boolean;
 }
 
-export type ProbeTransport = "stdio" | "http";
+export type ProbeTransport = "stdio" | "http" | "sse";
 export type ProbeStatus =
   | "connected"
   | "auth-required"
@@ -79,6 +88,13 @@ export interface ProbeOptions {
   concurrency?: number;
   scanOptions?: Omit<ScanOptions, "includeSensitive">;
   serverNames?: string[];
+}
+
+export interface ProbeTargetOptions {
+  timeoutMs?: number;
+  concurrency?: number;
+  serverNames?: string[];
+  platform?: NodeJS.Platform;
 }
 
 export interface RepairAction {

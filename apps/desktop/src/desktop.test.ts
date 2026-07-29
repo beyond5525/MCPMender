@@ -82,4 +82,106 @@ describe("desktop diagnostics workflow", () => {
       "const report = lastScanReport ?? (await performScan())"
     );
   });
+
+  it("provides bounded deep-check progress and safe cancellation", async () => {
+    const [main, preload, renderer, html] = await Promise.all([
+      readFile(path.resolve(process.cwd(), "src/main.ts"), "utf8"),
+      readFile(path.resolve(process.cwd(), "src/preload.ts"), "utf8"),
+      readFile(path.resolve(process.cwd(), "src/renderer.ts"), "utf8"),
+      readFile(path.resolve(process.cwd(), "src/index.html"), "utf8")
+    ]);
+
+    expect(main).toContain("const controller = new AbortController()");
+    expect(main).toContain('event.sender.send("mcpmender:probe-progress"');
+    expect(main).toContain('ipcMain.handle("mcpmender:probe-cancel"');
+    expect(main).toContain("while (!controller.signal.aborted");
+    expect(preload).toContain('ipcRenderer.invoke("mcpmender:probe-cancel")');
+    expect(preload).toContain(
+      'ipcRenderer.on("mcpmender:probe-progress", listener)'
+    );
+    expect(renderer).toContain("window.mcpmender.cancelProbe()");
+    expect(renderer).toContain("updateProbeProgress");
+    expect(html).toContain('id="probe-progress-bar"');
+  });
+
+  it("keeps rollback authority and integrity validation in the main process", async () => {
+    const [main, preload, renderer, html] = await Promise.all([
+      readFile(path.resolve(process.cwd(), "src/main.ts"), "utf8"),
+      readFile(path.resolve(process.cwd(), "src/preload.ts"), "utf8"),
+      readFile(path.resolve(process.cwd(), "src/renderer.ts"), "utf8"),
+      readFile(path.resolve(process.cwd(), "src/index.html"), "utf8")
+    ]);
+
+    expect(main).toContain("isPathInside(backupRoot, entry.backupPath)");
+    expect(main).toContain("sha256(backupBytes) !== entry.backupHash");
+    expect(main).toContain("sha256(currentBytes) !== entry.repairedHash");
+    expect(main).toContain("rollbackRepair(entry.backupPath, entry.configPath, {");
+    expect(main).toContain("expectedCurrentHash: entry.repairedHash");
+    expect(preload).toContain(
+      'ipcRenderer.invoke("mcpmender:rollback-run", entryId)'
+    );
+    expect(renderer).toContain("window.confirm(t(\"desktop.rollbackConfirm\"))");
+    expect(html).toContain('id="rollback-dialog"');
+  });
+
+  it("uses portable writable storage with an explicit fallback", async () => {
+    const [main, renderer] = await Promise.all([
+      readFile(path.resolve(process.cwd(), "src/main.ts"), "utf8"),
+      readFile(path.resolve(process.cwd(), "src/renderer.ts"), "utf8")
+    ]);
+
+    expect(main).toContain("process.env.PORTABLE_EXECUTABLE_DIR");
+    expect(main).toContain('["userData", "user-data"]');
+    expect(main).toContain('["sessionData", "session-data"]');
+    expect(main).toContain('["cache", "cache"]');
+    expect(main).toContain('["crashDumps", "crash-dumps"]');
+    expect(main).toContain('["logs", "logs"]');
+    expect(main).toContain("app.setPath(name, target)");
+    expect(renderer).toContain("desktop.storageFallback");
+  });
+
+  it("keeps packaged file loading functional and adapts to narrow views", async () => {
+    const [packageJson, styles] = await Promise.all([
+      readFile(path.resolve(process.cwd(), "package.json"), "utf8"),
+      readFile(path.resolve(process.cwd(), "src/styles.css"), "utf8")
+    ]);
+    const manifest = JSON.parse(packageJson) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+      build: {
+        electronFuses: { grantFileProtocolExtraPrivileges: boolean };
+      };
+    };
+
+    // Electron's loadFile() reads renderer assets from app.asar through file://.
+    // Disabling this fuse makes the packaged window fail with ERR_FILE_NOT_FOUND.
+    expect(mainWindowUsesLoadFile(await readFile(
+      path.resolve(process.cwd(), "src/main.ts"),
+      "utf8"
+    ))).toBe(true);
+    expect(
+      manifest.build.electronFuses.grantFileProtocolExtraPrivileges
+    ).toBe(true);
+    expect(manifest.dependencies?.["@mcpmender/core"]).toBeUndefined();
+    expect(manifest.devDependencies?.["@mcpmender/core"]).toBe("workspace:*");
+    expect(styles).toContain("@media (max-width: 720px)");
+    expect(styles).toContain("min-width: 0");
+  });
+
+  it("fails release captures when the expected renderer DOM is absent", async () => {
+    const main = await readFile(
+      path.resolve(process.cwd(), "src/main.ts"),
+      "utf8"
+    );
+
+    expect(main).toContain('initialPage === "MCPMender-Handbook.html"');
+    expect(main).toContain('expectedSelector');
+    expect(main).toContain('webContents.executeJavaScript(');
+    expect(main).toContain("if (!rendererReady)");
+    expect(main).toContain("app.exit(70)");
+  });
 });
+
+function mainWindowUsesLoadFile(main: string): boolean {
+  return main.includes("mainWindow.loadFile(path.join(__dirname, initialPage))");
+}

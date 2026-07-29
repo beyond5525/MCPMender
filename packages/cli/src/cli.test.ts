@@ -86,7 +86,7 @@ describe("packaged CLI entry point", () => {
     expect(result).toMatchObject({
       exitCode: 0,
       stderr: "",
-      stdout: "0.3.0-beta.1\n"
+      stdout: "0.3.0-beta.2\n"
     });
   });
 
@@ -94,7 +94,7 @@ describe("packaged CLI entry point", () => {
     const result = await runNode(["help", "--lang", "en"]);
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
-    expect(result.stdout).toContain("MCPMender 0.3.0-beta.1");
+    expect(result.stdout).toContain("MCPMender 0.3.0-beta.2");
     expect(result.stdout).toContain("mcpmender scan");
     expect(result.stdout).toContain("mcpmender probe");
     expect(result.stdout).toContain("mcpmender repair");
@@ -105,6 +105,16 @@ describe("packaged CLI entry point", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr.toLowerCase()).toContain("unknown command");
+  });
+
+  it("rejects unknown options and missing option values", async () => {
+    const unknown = await runNode(["scan", "--definitely-unknown"]);
+    expect(unknown.exitCode).toBe(1);
+    expect(unknown.stderr).toContain("Unknown option");
+
+    const missing = await runNode(["scan", "--lang"]);
+    expect(missing.exitCode).toBe(1);
+    expect(missing.stderr).toContain("--lang requires a value");
   });
 
   it("rejects an invalid probe timeout before starting configured servers", async () => {
@@ -119,6 +129,15 @@ describe("packaged CLI entry point", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr.toLowerCase()).toContain("--timeout");
+  });
+
+  it("rejects an unmatched probe server filter instead of reporting 0/0 success", async () => {
+    const result = await runNode(
+      ["probe", "--run", "--server", "definitely-missing", "--json"],
+      { isolatedHome: true }
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("No configured server matched");
   });
 
   it("emits machine-readable, secret-redacted scan JSON", async () => {

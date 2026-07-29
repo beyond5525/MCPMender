@@ -17,12 +17,46 @@ $certificateFriendlyName = "MCPMender Community Build (self-signed)"
 $codeSigningEku = "1.3.6.1.5.5.7.3.3"
 $minimumRemainingLifetime = (Get-Date).AddDays(30)
 
+function Assert-MCPMenderSigningCertificate {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate,
+
+        [switch]$RequireFriendlyName,
+
+        [switch]$RequirePrivateKey
+    )
+
+    $now = Get-Date
+    if ($Certificate.Subject -ne $certificateSubject) {
+        throw "Signing certificate has unexpected subject '$($Certificate.Subject)'."
+    }
+    if ($Certificate.Issuer -ne $Certificate.Subject) {
+        throw "Signing certificate is not self-signed (issuer '$($Certificate.Issuer)')."
+    }
+    if ($RequireFriendlyName -and $Certificate.FriendlyName -ne $certificateFriendlyName) {
+        throw "Signing certificate has unexpected friendly name '$($Certificate.FriendlyName)'."
+    }
+    if ($RequirePrivateKey -and -not $Certificate.HasPrivateKey) {
+        throw "Signing certificate has no private key."
+    }
+    if ($Certificate.NotBefore -gt $now -or $Certificate.NotAfter -le $minimumRemainingLifetime) {
+        throw "Signing certificate is not currently valid with at least 30 days remaining."
+    }
+    $ekuObjectIds = @($Certificate.EnhancedKeyUsageList | ForEach-Object { [string]$_.ObjectId })
+    if ($ekuObjectIds -notcontains $codeSigningEku) {
+        throw "Signing certificate does not include the Code Signing EKU ($codeSigningEku)."
+    }
+}
+
 function Get-MCPMenderSigningCertificate {
     $existing = Get-ChildItem -Path Cert:\CurrentUser\My |
         Where-Object {
             $_.Subject -eq $certificateSubject -and
+            $_.Issuer -eq $_.Subject -and
             $_.FriendlyName -eq $certificateFriendlyName -and
             $_.HasPrivateKey -and
+            $_.NotBefore -le (Get-Date) -and
             $_.NotAfter -gt $minimumRemainingLifetime -and
             (@($_.EnhancedKeyUsageList | ForEach-Object { [string]$_.ObjectId }) -contains $codeSigningEku)
         } |
@@ -31,11 +65,12 @@ function Get-MCPMenderSigningCertificate {
 
     if ($null -ne $existing) {
         Write-Host "Reusing CurrentUser code-signing certificate $($existing.Thumbprint)."
+        Assert-MCPMenderSigningCertificate -Certificate $existing -RequireFriendlyName -RequirePrivateKey
         return $existing
     }
 
     Write-Host "Creating a non-exportable CurrentUser code-signing certificate."
-    return New-SelfSignedCertificate `
+    $created = New-SelfSignedCertificate `
         -Type CodeSigningCert `
         -Subject $certificateSubject `
         -FriendlyName $certificateFriendlyName `
@@ -46,6 +81,8 @@ function Get-MCPMenderSigningCertificate {
         -KeyExportPolicy NonExportable `
         -KeyUsage DigitalSignature `
         -NotAfter (Get-Date).AddYears(3)
+    Assert-MCPMenderSigningCertificate -Certificate $created -RequireFriendlyName -RequirePrivateKey
+    return $created
 }
 
 function Set-MCPMenderAuthenticodeSignature {
@@ -90,9 +127,14 @@ function Set-MCPMenderAuthenticodeSignature {
     if ($null -eq $signature.SignerCertificate) {
         throw "Signing did not produce an Authenticode signer for '$LiteralPath'."
     }
-    if ($signature.Status -in @("HashMismatch", "NotSigned", "NotSupported", "Incompatible")) {
-        throw "Signing produced an unusable Authenticode signature on '$LiteralPath' (status: $($signature.Status))."
+    $signatureStatus = $signature.Status.ToString()
+    $isExpectedUntrustedRoot =
+        $signatureStatus -eq "UnknownError" -and
+        $signature.StatusMessage -match "(?i)(root certificate.+not trusted|untrustedroot)"
+    if ($signatureStatus -notin @("Valid", "NotTrusted") -and -not $isExpectedUntrustedRoot) {
+        throw "Signing produced an unacceptable Authenticode signature on '$LiteralPath' (status: $signatureStatus)."
     }
+    Assert-MCPMenderSigningCertificate -Certificate $signature.SignerCertificate
     if ($signature.SignerCertificate.Thumbprint -ne $Certificate.Thumbprint) {
         throw "The signer thumbprint on '$LiteralPath' does not match the selected certificate."
     }

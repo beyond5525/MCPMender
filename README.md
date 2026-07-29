@@ -7,7 +7,7 @@ It helps people find out why an MCP server is not visible, will not start, or
 cannot complete an MCP handshake in Codex, Claude Desktop, Cursor, VS Code,
 Gemini CLI, and OpenCode.
 
-> **Release status:** `0.3.0-beta.1`. This is a public beta, not a stable v1.0
+> **Release status:** `0.3.0-beta.2`. This is a public beta, not a stable v1.0
 > release. Keep a copy of important configuration and review every repair
 > preview before applying it.
 
@@ -105,7 +105,7 @@ mcpmender --help
 To test a downloaded npm tarball before registry publication:
 
 ```sh
-npm install --global ./mcpmender-0.3.0-beta.1.tgz
+npm install --global ./mcpmender-0.3.0-beta.2.tgz
 ```
 
 Common commands:
@@ -122,6 +122,19 @@ mcpmender repair --apply-safe
 ```
 
 `--lang en`, `--lang zh-CN`, and `--lang ja` are supported.
+
+CLI exit codes are stable for automation:
+
+| Exit code | Meaning |
+| ---: | --- |
+| `0` | Command completed and no blocking scan/probe failure was found |
+| `1` | Invalid command/options, unmatched server filter, or unexpected runtime failure |
+| `2` | Scan found errors, or a live probe failed/required authentication |
+| `3` | At least one requested safe repair was skipped or failed |
+
+The Desktop backup-history panel can restore a recorded repair only when the
+current configuration still matches the repaired version. This prevents
+rollback from silently overwriting later user edits.
 
 ## Privacy and security
 

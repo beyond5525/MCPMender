@@ -10,6 +10,7 @@
   --text: #eef5ff;
   --muted: #8fa8c7;
   --cyan: #50e6d0;
+  --accent: #50e6d0;
   --blue: #60a5fa;
   --amber: #f8c76a;
   --red: #ff7b86;
@@ -20,7 +21,7 @@
 
 body {
   margin: 0;
-  min-width: 860px;
+  min-width: 0;
   min-height: 100vh;
   color: var(--text);
   background:
@@ -178,6 +179,24 @@ main {
   background: var(--accent);
 }
 
+.probe-progress {
+  display: grid;
+  flex: 0 0 100%;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.probe-progress[hidden] {
+  display: none;
+}
+
+.probe-progress progress {
+  width: 100%;
+  height: 7px;
+  accent-color: var(--cyan);
+}
+
 @keyframes scan-pulse {
   70% {
     box-shadow: 0 0 0 7px rgba(89, 227, 206, 0);
@@ -248,6 +267,17 @@ main {
 .workspace-bar span,
 .workspace-bar strong {
   display: block;
+}
+
+.storage-path {
+  display: block;
+  max-width: 760px;
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .workspace-bar span {
@@ -441,6 +471,27 @@ dialog::backdrop {
   background: rgba(255, 255, 255, 0.025);
 }
 
+.rollback-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+}
+
+.rollback-item strong,
+.rollback-item .client-path {
+  grid-column: 1;
+}
+
+.rollback-item small {
+  color: var(--muted);
+}
+
+.rollback-entry-button {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+}
+
 .safety-callout {
   margin: 14px 0;
   padding: 12px 14px;
@@ -553,4 +604,55 @@ dialog::backdrop {
   .client-findings { grid-column: 1 / -1; }
   .probe-result-grid { grid-template-columns: 1fr; }
   .workspace-bar { align-items: flex-start; }
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    padding-left: 18px;
+  }
+  main {
+    width: min(100% - 32px, 1120px);
+    padding-top: 28px;
+  }
+  .hero {
+    flex-direction: column;
+  }
+  .hero-actions {
+    width: 100%;
+    max-width: none;
+    justify-content: flex-start;
+  }
+  .workspace-bar {
+    flex-direction: column;
+  }
+  .client-card {
+    grid-template-columns: 1fr;
+  }
+  .client-findings {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .brand small,
+  .language-control span {
+    display: none;
+  }
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .button {
+    max-width: 100%;
+  }
+  .rollback-item {
+    grid-template-columns: 1fr;
+  }
+  .rollback-entry-button {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  dialog {
+    width: calc(100vw - 24px);
+    padding: 18px;
+  }
 }

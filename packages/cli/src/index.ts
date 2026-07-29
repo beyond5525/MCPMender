@@ -13,20 +13,23 @@ import {
   type Locale,
   type ScanReport
 } from "@mcpmender/core";
+import { parseCliArguments } from "./args.js";
 
-function argValue(name: string): string | undefined {
-  const direct = process.argv.find((arg) => arg.startsWith(`${name}=`));
-  if (direct) return direct.slice(name.length + 1);
-  const index = process.argv.indexOf(name);
-  return index >= 0 ? process.argv[index + 1] : undefined;
+let cli: ReturnType<typeof parseCliArguments>;
+try {
+  cli = parseCliArguments(process.argv.slice(2));
+} catch (error) {
+  process.stderr.write(
+    `${error instanceof Error ? error.message : String(error)}\n`
+  );
+  process.exit(1);
 }
-
-const command = process.argv[2]?.startsWith("-") ? "scan" : process.argv[2] ?? "scan";
+const command = cli.command;
 const locale: Locale = normalizeLocale(
-  argValue("--lang") ?? process.env.LANG ?? Intl.DateTimeFormat().resolvedOptions().locale
+  cli.lang ?? process.env.LANG ?? Intl.DateTimeFormat().resolvedOptions().locale
 );
-const json = process.argv.includes("--json");
-const VERSION = "0.3.0-beta.1";
+const json = cli.json;
+const VERSION = "0.3.0-beta.2";
 
 function t(key: string, params?: Record<string, string | number>): string {
   return translate(locale, key, params);
@@ -56,7 +59,7 @@ function printHuman(report: ScanReport): void {
       (item) => item.severity !== "info"
     )) {
       process.stdout.write(
-        `  ${finding.severity === "error" ? "×" : "!"} ${t(
+        `  ${finding.severity === "error" ? "✗" : "!"} ${t(
           finding.titleKey,
           finding.detailParams
         )}\n`
@@ -100,46 +103,36 @@ function probeStatusLabel(status: string): string {
 }
 
 async function main(): Promise<void> {
-  if (process.argv.includes("--version") || process.argv.includes("-v")) {
+  if (cli.version) {
     process.stdout.write(`${VERSION}\n`);
     return;
   }
   if (
-    command === "help" ||
-    process.argv.includes("--help") ||
-    process.argv.includes("-h")
+    cli.help
   ) {
     printHelp();
     return;
   }
-  if (!["scan", "probe", "repair"].includes(command)) {
-    process.stderr.write(
-      `Unknown command: ${command}\nRun "mcpmender --help" to see available commands.\n`
-    );
-    process.exitCode = 1;
-    return;
-  }
-
   if (command === "probe") {
-    const run = process.argv.includes("--run");
-    const timeout = Number(argValue("--timeout") ?? "8000");
-    if (!Number.isFinite(timeout) || timeout <= 0 || timeout > 300_000) {
-      process.stderr.write(
-        "--timeout must be a number between 1 and 300000 milliseconds.\n"
-      );
-      process.exitCode = 1;
-      return;
-    }
-    const selected = process.argv
-      .filter((arg) => arg.startsWith("--server="))
-      .map((arg) => arg.slice("--server=".length));
-    const separateServer = argValue("--server");
-    if (separateServer && !selected.includes(separateServer)) {
-      selected.push(separateServer);
-    }
+    const run = cli.run;
+    const timeout = cli.timeout;
+    const selected = [...new Set(cli.servers)];
 
     if (!run) {
-      const targets = await planProbeTargets();
+      const allTargets = await planProbeTargets();
+      const availableNames = new Set(
+        allTargets.map((target) => target.server.name)
+      );
+      const missingNames = selected.filter((name) => !availableNames.has(name));
+      if (missingNames.length > 0) {
+        throw new Error(
+          `No configured server matched: ${missingNames.join(", ")}`
+        );
+      }
+      const targets =
+        selected.length === 0
+          ? allTargets
+          : allTargets.filter((target) => selected.includes(target.server.name));
       if (json) {
         process.stdout.write(
           `${JSON.stringify(redactReport(targets, os.homedir()), null, 2)}\n`
@@ -165,6 +158,9 @@ async function main(): Promise<void> {
       timeoutMs: timeout,
       serverNames: selected
     });
+    if (selected.length > 0 && probe.summary.total === 0) {
+      throw new Error(`No configured server matched: ${selected.join(", ")}`);
+    }
     if (json) {
       process.stdout.write(
         `${JSON.stringify(redactReport(probe, os.homedir()), null, 2)}\n`
@@ -178,7 +174,7 @@ async function main(): Promise<void> {
               : t("probe.tools", { count: result.toolCount })
             : result.detail ?? "";
         process.stdout.write(
-          `${result.status === "connected" ? "✓" : "×"} ` +
+          `${result.status === "connected" ? "✓" : "✗"} ` +
             `${result.clientName} / ${result.serverName} — ` +
             `${probeStatusLabel(result.status)} (${result.durationMs} ms)` +
             `${detail ? `\n  ${detail}` : ""}\n`
@@ -200,32 +196,43 @@ async function main(): Promise<void> {
   const report = await scanMcpConfigurations();
 
   if (command === "repair") {
-    if (process.argv.includes("--apply-safe")) {
+    if (cli.applySafe) {
       const result = await applySafeRepairs(report.repairs);
       if (json) {
-        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+        process.stdout.write(
+          `${JSON.stringify(redactReport(result, os.homedir()), null, 2)}\n`
+        );
       } else {
         for (const item of result.results) {
+          const safeItem = redactReport(item, os.homedir());
           process.stdout.write(
-            `${item.applied ? "✓" : "!"} ${t(item.messageKey)} ${item.configPath}\n`
+            `${safeItem.applied ? "✓" : "!"} ${t(safeItem.messageKey)} ${safeItem.configPath}\n`
           );
+          if (safeItem.backupPath) {
+            process.stdout.write(`  Backup: ${safeItem.backupPath}\n`);
+          }
         }
+        process.stdout.write(`Transaction: ${result.transactionId}\n`);
       }
+      if (result.results.some((item) => !item.applied)) process.exitCode = 3;
       return;
     }
 
     if (json) {
-      process.stdout.write(`${JSON.stringify(report.repairs, null, 2)}\n`);
+      process.stdout.write(
+        `${JSON.stringify(redactReport(report.repairs, os.homedir()), null, 2)}\n`
+      );
     } else if (report.repairs.length === 0) {
       process.stdout.write(`${t("summary.safeRepairs")}: 0\n`);
     } else {
       process.stdout.write(`${t("repair.previewTitle")}\n\n`);
       for (const repair of report.repairs) {
+        const safeRepair = redactReport(repair, os.homedir());
         process.stdout.write(
-          `${repair.clientName} / ${repair.serverName}\n` +
-            `  ${t(repair.titleKey)}\n` +
-            `  ${t("repair.before")}: ${repair.before.command} ${repair.before.args.join(" ")}\n` +
-            `  ${t("repair.after")}: ${repair.after.command} ${repair.after.args.join(" ")}\n\n`
+          `${safeRepair.clientName} / ${safeRepair.serverName}\n` +
+            `  ${t(safeRepair.titleKey)}\n` +
+            `  ${t("repair.before")}: ${safeRepair.before.command} ${safeRepair.before.args.join(" ")}\n` +
+            `  ${t("repair.after")}: ${safeRepair.after.command} ${safeRepair.after.args.join(" ")}\n\n`
         );
       }
     }
@@ -239,6 +246,7 @@ async function main(): Promise<void> {
   } else {
     printHuman(report);
   }
+  if (report.summary.errors > 0) process.exitCode = 2;
 }
 
 main().catch((error: unknown) => {

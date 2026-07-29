@@ -294,7 +294,7 @@
   <script>
     const handbook = {
       en: {
-        edition: "Offline Handbook · 0.3.0-beta.1",
+        edition: "Offline Handbook · 0.3.0-beta.2",
         printLabel: "Print / Save PDF",
         sideNote: "This handbook is included with MCPMender and works completely offline. Use your browser’s Print command to save the current language as PDF.",
         hero: {
@@ -337,10 +337,11 @@ mcpmender probe --run</pre>`
             html: `<table><thead><tr><th>Area</th><th>Purpose</th></tr></thead><tbody>
               <tr><td>Summary cards</td><td>Show detected clients, configured servers, problems, and safe repairs.</td></tr>
               <tr><td>Client cards</td><td>Show the exact configuration path, server count, status, and findings for each supported AI tool.</td></tr>
-              <tr><td>Select project folder</td><td>Adds the selected project’s <code>.vscode/mcp.json</code> to scan and deep-check scope. MCPMender never guesses from the portable EXE extraction folder.</td></tr>
+              <tr><td>Select project folder</td><td>Adds supported VS Code, Cursor, Codex, Gemini CLI, and OpenCode project configuration locations to the scan scope. MCPMender never guesses from the portable EXE extraction folder.</td></tr>
               <tr><td>Scan now</td><td>Repeats a read-only discovery and static validation pass.</td></tr>
-              <tr><td>Deep connection check</td><td>After confirmation, temporarily starts local servers or contacts remote endpoints, performs a real MCP handshake, lists tools when supported, and closes the connection.</td></tr>
+              <tr><td>Deep connection check</td><td>After confirmation, starts or contacts targets with per-target progress. Cancel stops new targets and safely waits for at most two active checks to reach their timeout.</td></tr>
               <tr><td>Repair safe issues</td><td>Opens a before/after preview. It does not write immediately.</td></tr>
+              <tr><td>Backup history</td><td>Offers rollback only while the current file still matches the repaired version.</td></tr>
               <tr><td>Export report</td><td>Creates a structured JSON report with home paths and common token patterns redacted.</td></tr>
               <tr><td>Tutorial & help</td><td>Opens this offline handbook in a separate MCPMender window.</td></tr>
             </tbody></table>`
@@ -361,9 +362,9 @@ mcpmender probe --run</pre>`
               <li>MCPMender scans the file and records its content hash.</li>
               <li>You see the exact command before and after the proposed repair.</li>
               <li>When confirmed, MCPMender checks that the file did not change after the scan.</li>
-              <li>The original file is copied into a local transaction backup.</li>
-              <li>The change is applied and the resulting syntax is validated.</li>
-              <li>If validation fails, the original is restored.</li>
+              <li>The original content is written to a uniquely named local transaction backup.</li>
+              <li>The change is validated in a temporary file and committed atomically only if the source still matches.</li>
+              <li>Backup history offers rollback, but refuses to overwrite later edits.</li>
             </ol>
             <h3>CLI repair commands</h3><pre>mcpmender repair
 mcpmender repair --apply-safe</pre>
@@ -382,7 +383,8 @@ mcpmender repair --apply-safe</pre>
               <tr><td><code>mcpmender probe --run --server name</code></td><td>Deep-check only one named server.</td></tr>
               <tr><td><code>mcpmender repair</code></td><td>Show safe repair proposals without writing.</td></tr>
               <tr><td><code>mcpmender repair --apply-safe</code></td><td>Back up and apply eligible safe repairs.</td></tr>
-            </tbody></table>`
+            </tbody></table>
+            <p>Exit codes: <code>0</code> success, <code>1</code> invalid input or runtime failure, <code>2</code> scan/probe failure, and <code>3</code> skipped or failed repair.</p>`
           },
           {
             id: "privacy", title: "7. Privacy and security", lead: "MCP configurations may contain sensitive paths and credentials. MCPMender is designed to minimize unnecessary exposure.",
@@ -392,7 +394,7 @@ mcpmender repair --apply-safe</pre>
               <li>Exported reports replace the user home path and common token shapes.</li>
               <li>Backups remain local and may still contain original secrets; protect them like the source configuration.</li>
               <li>MCPMender does not claim that a discovered MCP server is safe.</li>
-              <li>Deep connection check always shows a preview and requires confirmation because configured commands can execute third-party code and <code>npx</code> may download packages.</li>
+              <li>In Desktop, Deep connection check always shows a preview and requires confirmation. In the CLI, <code>probe --run</code> is the explicit authorization and reads the current configuration again immediately before running. Configured commands can execute third-party code and <code>npx</code> may download packages.</li>
               <li>Every deep check has a timeout and closes its process or HTTP connection when finished.</li>
             </ul>
             <div class="callout"><strong>Before sharing a report</strong><p>Open it and perform a final human review. No automated redactor can guarantee detection of every custom secret format.</p></div>`
@@ -400,7 +402,7 @@ mcpmender repair --apply-safe</pre>
           {
             id: "platforms", title: "8. Windows, macOS, Linux, and WSL", lead: "The core concepts are shared, but process launching and configuration paths differ.",
             html: `<table><thead><tr><th>Platform</th><th>Common concern</th></tr></thead><tbody>
-              <tr><td>Windows</td><td>Extract the archive and run the portable <code>.exe</code>; no installation is required. A beta self-signed signature is not automatically trusted by Windows or SmartScreen. Verify the published SHA-256 checksum before accepting a warning. <code>npx.cmd</code> and other wrappers may require <code>cmd /c</code>, and spaces in paths matter.</td></tr>
+              <tr><td>Windows</td><td>Extract the archive and run the portable <code>.exe</code>; no installation is required. When the folder is writable, settings, cache, logs, and backups stay in the adjacent <code>data</code> folder; otherwise the interface shows the fallback location. A beta self-signed signature is not automatically trusted by Windows or SmartScreen.</td></tr>
               <tr><td>macOS</td><td>Choose the Apple Silicon or Intel package, open the DMG, and move MCPMender to Applications. A beta ad-hoc signature does not establish developer identity, is not trusted by Gatekeeper, and may require explicit approval in Privacy &amp; Security after checksum verification.</td></tr>
               <tr><td>Linux</td><td>Make the AppImage executable with <code>chmod +x</code> and run it, or extract the tar.gz and run <code>mcpmender</code>. Missing shared libraries vary by distribution.</td></tr>
               <tr><td>WSL</td><td>Do not mix a Windows executable with a Linux path, or a Linux executable with an unconverted Windows path.</td></tr>
@@ -461,7 +463,7 @@ mcpmender repair --apply-safe</pre>
         footer: "MCPMender Offline Handbook · Pre-release documentation. Features may change before v1.0."
       },
       "zh-CN": {
-        edition: "离线使用手册 · 0.3.0-beta.1",
+        edition: "离线使用手册 · 0.3.0-beta.2",
         printLabel: "打印 / 保存为 PDF",
         sideNote: "本手册随 MCPMender 一起提供，可完全离线使用。使用浏览器的“打印”功能，可以把当前语言保存为 PDF。",
         hero: {
@@ -504,10 +506,11 @@ mcpmender probe --run</pre>`
             html: `<table><thead><tr><th>区域</th><th>作用</th></tr></thead><tbody>
               <tr><td>顶部统计卡</td><td>显示已发现客户端、MCP 服务数量、问题数量和可安全修复数量。</td></tr>
               <tr><td>客户端卡片</td><td>显示配置路径、服务数量、状态和每一条检查结果。</td></tr>
-              <tr><td>选择项目文件夹</td><td>把所选项目中的 <code>.vscode/mcp.json</code> 加入普通检测和深度检测范围，不会把便携版临时解压目录误当作项目。</td></tr>
+              <tr><td>选择项目文件夹</td><td>把所选项目中受支持的 VS Code、Cursor、Codex、Gemini CLI 和 OpenCode 配置位置加入检测范围，不会把便携版临时解压目录误当作项目。</td></tr>
               <tr><td>立即检测</td><td>重新执行只读发现和静态配置检查。</td></tr>
-              <tr><td>深度连接检测</td><td>确认后临时启动本地服务或连接远程地址，执行真实 MCP 握手，在支持时读取工具列表，完成后关闭连接。</td></tr>
+              <tr><td>深度连接检测</td><td>确认后启动或连接目标并显示逐项进度。取消会停止新目标，最多等待两个正在执行的目标安全超时关闭。</td></tr>
               <tr><td>一键修复安全问题</td><td>先打开修改预览，不会点击后立即写入。</td></tr>
+              <tr><td>备份与回滚</td><td>只有当前文件仍与修复后版本一致时才允许回滚，避免覆盖后续修改。</td></tr>
               <tr><td>导出脱敏报告</td><td>生成结构化 JSON，并隐藏用户主目录和常见 Token。</td></tr>
               <tr><td>教程与帮助</td><td>在独立的 MCPMender 窗口中打开这份离线手册。</td></tr>
             </tbody></table>`
@@ -528,9 +531,9 @@ mcpmender probe --run</pre>`
               <li>MCPMender 读取配置并记录内容哈希。</li>
               <li>用户先看到建议修改前后的完整命令。</li>
               <li>确认后再次检查文件是否在检测后被其他程序修改。</li>
-              <li>把原文件复制到本地事务备份目录。</li>
-              <li>应用修改并重新验证配置语法。</li>
-              <li>如果验证失败，恢复原配置。</li>
+              <li>把原始内容写入名称唯一的本地事务备份。</li>
+              <li>先在临时文件中验证，确认源文件未变化后再原子替换。</li>
+              <li>可在“备份与回滚”中撤销，但不会覆盖修复后的新修改。</li>
             </ol>
             <h3>命令行修复</h3><pre>mcpmender repair
 mcpmender repair --apply-safe</pre>
@@ -549,7 +552,8 @@ mcpmender repair --apply-safe</pre>
               <tr><td><code>mcpmender probe --run --server 名称</code></td><td>只深度检测指定服务。</td></tr>
               <tr><td><code>mcpmender repair</code></td><td>只显示安全修复方案，不写入配置。</td></tr>
               <tr><td><code>mcpmender repair --apply-safe</code></td><td>备份并应用符合条件的安全修复。</td></tr>
-            </tbody></table>`
+            </tbody></table>
+            <p>退出码：<code>0</code> 成功，<code>1</code> 参数或运行错误，<code>2</code> 检测或连接失败，<code>3</code> 修复被跳过或失败。</p>`
           },
           {
             id: "privacy", title: "7. 隐私与安全", lead: "MCP 配置可能包含敏感路径和凭据，因此 MCPMender 尽量减少不必要的数据暴露。",
@@ -559,7 +563,7 @@ mcpmender repair --apply-safe</pre>
               <li>导出报告会隐藏用户主目录和常见 Token 形式。</li>
               <li>备份保存在本地，但它仍可能包含原配置中的秘密，应像保护原配置一样保护备份。</li>
               <li>MCPMender 不会因为发现一个 MCP 就宣称它安全可信。</li>
-              <li>深度连接检测会先显示预览并要求确认，因为配置命令可能执行第三方代码，<code>npx</code> 也可能下载软件包。</li>
+              <li>Desktop 的深度连接检测会先显示预览并要求确认；CLI 中输入 <code>probe --run</code> 就代表明确授权，并会在执行前重新读取一次当前配置。配置命令可能执行第三方代码，<code>npx</code> 也可能下载软件包。</li>
               <li>每次深度检测都有超时限制，完成后会关闭子进程或 HTTP 连接。</li>
             </ul>
             <div class="callout"><strong>分享报告之前</strong><p>请打开报告进行最后一次人工检查。任何自动脱敏工具都无法保证识别所有自定义秘密格式。</p></div>`
@@ -567,7 +571,7 @@ mcpmender repair --apply-safe</pre>
           {
             id: "platforms", title: "8. Windows、macOS、Linux 与 WSL", lead: "核心原理相同，但不同系统的进程启动和配置路径存在差异。",
             html: `<table><thead><tr><th>平台</th><th>常见问题</th></tr></thead><tbody>
-              <tr><td>Windows</td><td>解压发布包后直接运行便携版 <code>.exe</code>，无需安装。Beta 的自签名证书不会自动获得 Windows 或 SmartScreen 信任；遇到提示时应先核对发布页的 SHA-256。<code>npx.cmd</code> 等命令可能需要 <code>cmd /c</code>，带空格路径和引号规则也很重要。</td></tr>
+              <tr><td>Windows</td><td>解压发布包后直接运行便携版 <code>.exe</code>，无需安装。目录可写时，设置、缓存、日志和备份保存在软件旁的 <code>data</code> 文件夹；不可写时界面会明确显示回退位置。Beta 自签名证书不会自动获得 Windows 或 SmartScreen 信任。</td></tr>
               <tr><td>macOS</td><td>按电脑选择 Apple 芯片版或 Intel 版，打开 DMG 后把 MCPMender 移入“应用程序”。Beta 的 ad-hoc（临时）签名不能证明开发者身份，也不受 Gatekeeper 信任；核对 SHA-256 后，仍可能需要在“隐私与安全性”中明确允许。</td></tr>
               <tr><td>Linux</td><td>对 AppImage 执行 <code>chmod +x</code> 后运行；也可解压 tar.gz 并运行 <code>mcpmender</code>。不同发行版缺失的动态库可能不同。</td></tr>
               <tr><td>WSL</td><td>不要让 Windows 程序直接使用 Linux 路径，也不要让 Linux 程序使用未转换的 Windows 路径。</td></tr>
@@ -628,7 +632,7 @@ mcpmender repair --apply-safe</pre>
         footer: "MCPMender 离线使用手册 · 当前为预发布文档，v1.0 前功能可能调整。"
       },
       ja: {
-        edition: "オフラインハンドブック · 0.3.0-beta.1",
+        edition: "オフラインハンドブック · 0.3.0-beta.2",
         printLabel: "印刷 / PDF に保存",
         sideNote: "このハンドブックは MCPMender に同梱され、完全にオフラインで利用できます。ブラウザーの印刷機能で、現在の言語を PDF として保存できます。",
         hero: {
@@ -671,10 +675,11 @@ mcpmender probe --run</pre>`
             html: `<table><thead><tr><th>領域</th><th>用途</th></tr></thead><tbody>
               <tr><td>サマリーカード</td><td>検出したクライアント、MCP サーバー、問題、安全な修復の数を表示します。</td></tr>
               <tr><td>クライアントカード</td><td>設定パス、サーバー数、状態、診断結果を表示します。</td></tr>
-              <tr><td>プロジェクトを選択</td><td>選択したプロジェクトの <code>.vscode/mcp.json</code> を通常診断と詳細診断に追加します。ポータブル EXE の一時展開先をプロジェクトとして扱いません。</td></tr>
+              <tr><td>プロジェクトを選択</td><td>選択したプロジェクトにある VS Code、Cursor、Codex、Gemini CLI、OpenCode の対応設定場所を診断対象へ追加します。</td></tr>
               <tr><td>今すぐ診断</td><td>読み取り専用の検出と静的チェックを再実行します。</td></tr>
-              <tr><td>詳細接続診断</td><td>確認後、ローカルサーバーの一時起動またはリモート接続を行い、実際の MCP ハンドシェイクとツール一覧を確認して接続を閉じます。</td></tr>
+              <tr><td>詳細接続診断</td><td>確認後に対象ごとの進捗を表示します。キャンセルすると新しい対象を停止し、実行中の最大 2 件を安全にタイムアウト終了します。</td></tr>
               <tr><td>安全な問題を一括修復</td><td>書き込む前に変更プレビューを開きます。</td></tr>
+              <tr><td>バックアップ履歴</td><td>現在の設定が修復後の状態と一致する場合だけロールバックを許可します。</td></tr>
               <tr><td>匿名化レポート</td><td>ホームパスや一般的な Token を隠した JSON を作成します。</td></tr>
               <tr><td>チュートリアルとヘルプ</td><td>このオフラインハンドブックを MCPMender の別ウィンドウで開きます。</td></tr>
             </tbody></table>`
@@ -695,9 +700,9 @@ mcpmender probe --run</pre>`
               <li>MCPMender が設定を読み、内容のハッシュを記録します。</li>
               <li>変更前と変更後のコマンドを確認します。</li>
               <li>確認後、診断以降にファイルが変更されていないか再確認します。</li>
-              <li>元の設定をローカルのトランザクションバックアップへコピーします。</li>
-              <li>変更を適用し、構文を再検証します。</li>
-              <li>検証に失敗した場合は元の設定を復元します。</li>
+              <li>元の内容を一意な名前のローカルトランザクションバックアップへ保存します。</li>
+              <li>一時ファイルで検証し、元設定が変わっていない場合だけアトミックに置き換えます。</li>
+              <li>バックアップ履歴から戻せますが、修復後の新しい変更は上書きしません。</li>
             </ol>
             <h3>CLI 修復コマンド</h3><pre>mcpmender repair
 mcpmender repair --apply-safe</pre>
@@ -716,7 +721,8 @@ mcpmender repair --apply-safe</pre>
               <tr><td><code>mcpmender probe --run --server 名前</code></td><td>指定サーバーだけを詳細診断します。</td></tr>
               <tr><td><code>mcpmender repair</code></td><td>書き込まずに修復案を表示。</td></tr>
               <tr><td><code>mcpmender repair --apply-safe</code></td><td>バックアップ後、安全な修復を適用。</td></tr>
-            </tbody></table>`
+            </tbody></table>
+            <p>終了コード：<code>0</code> 成功、<code>1</code> 入力または実行エラー、<code>2</code> 診断または接続失敗、<code>3</code> 修復のスキップまたは失敗。</p>`
           },
           {
             id: "privacy", title: "7. プライバシーとセキュリティ", lead: "MCP 設定には機密パスや資格情報が含まれる場合があります。MCPMender は不要な露出を最小限にします。",
@@ -726,7 +732,7 @@ mcpmender repair --apply-safe</pre>
               <li>レポートはホームパスと一般的な Token 形式を置き換えます。</li>
               <li>バックアップはローカルですが元の秘密を含む場合があり、元設定と同様に保護が必要です。</li>
               <li>発見した MCP サーバーが安全だとは宣言しません。</li>
-              <li>詳細接続診断は、設定コマンドが第三者コードを実行し <code>npx</code> がパッケージを取得する可能性があるため、必ずプレビューと確認を行います。</li>
+              <li>Desktop の詳細接続診断は必ずプレビューと確認を行います。CLI では <code>probe --run</code> の入力自体が明示的な許可となり、実行直前に現在の設定を再読込します。設定コマンドは第三者コードを実行し、<code>npx</code> がパッケージを取得する場合があります。</li>
               <li>各診断にはタイムアウトがあり、完了後に子プロセスまたは HTTP 接続を閉じます。</li>
             </ul>
             <div class="callout"><strong>レポート共有前</strong><p>必ず人が最終確認してください。自動匿名化ですべての独自秘密形式を検出できる保証はありません。</p></div>`
@@ -734,7 +740,7 @@ mcpmender repair --apply-safe</pre>
           {
             id: "platforms", title: "8. Windows・macOS・Linux・WSL", lead: "基本概念は共通ですが、プロセス起動と設定パスは OS ごとに異なります。",
             html: `<table><thead><tr><th>プラットフォーム</th><th>一般的な注意点</th></tr></thead><tbody>
-              <tr><td>Windows</td><td>アーカイブを展開し、ポータブル <code>.exe</code> を実行します。インストールは不要です。Beta の自己署名証明書は Windows や SmartScreen から自動的に信頼されません。警告を許可する前に公開 SHA-256 を確認してください。<code>npx.cmd</code> では <code>cmd /c</code> が必要な場合があり、空白を含むパスにも注意します。</td></tr>
+              <tr><td>Windows</td><td>アーカイブを展開し、ポータブル <code>.exe</code> を実行します。書き込み可能なら設定、キャッシュ、ログ、バックアップは隣の <code>data</code> に保存され、不可の場合は代替場所が画面に表示されます。Beta の自己署名証明書は Windows や SmartScreen から自動的に信頼されません。</td></tr>
               <tr><td>macOS</td><td>Apple Silicon 版または Intel 版を選び、DMG を開いて MCPMender をアプリケーションへ移動します。Beta の ad-hoc 署名は開発者の身元を証明せず、Gatekeeper から信頼されません。SHA-256 を確認しても「プライバシーとセキュリティ」で明示的な許可が必要な場合があります。</td></tr>
               <tr><td>Linux</td><td>AppImage に <code>chmod +x</code> を実行して起動するか、tar.gz を展開して <code>mcpmender</code> を実行します。必要な共有ライブラリはディストリビューションごとに異なります。</td></tr>
               <tr><td>WSL</td><td>Windows 実行ファイルと Linux パス、または Linux 実行ファイルと未変換 Windows パスを混在させないでください。</td></tr>

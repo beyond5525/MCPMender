@@ -54,6 +54,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify release tag matches package version
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          expected="v$(node -p "require('./package.json').version")"
+          test "$GITHUB_REF_NAME" = "$expected"
+
       - name: Audit production dependencies
         run: pnpm audit --prod --audit-level moderate
 
@@ -62,38 +69,69 @@ jobs:
           pnpm test
           pnpm typecheck
 
-      - name: Build Windows package
+      - name: Build Windows unpacked directory
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
           pnpm --filter @mcpmender/desktop build
-          pnpm --filter @mcpmender/desktop exec electron-builder --win portable --x64
+          pnpm --filter @mcpmender/desktop exec electron-builder --win --x64 --dir
+          if (-not (Test-Path -LiteralPath "apps\desktop\release\win-unpacked\MCPMender.exe" -PathType Leaf)) {
+            throw "electron-builder did not produce win-unpacked\MCPMender.exe."
+          }
 
       - name: Smoke-test Windows package
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          $capturePath = Join-Path $env:RUNNER_TEMP "mcpmender-windows.png"
-          $env:MCPMENDER_CAPTURE_PATH = $capturePath
           $executable = "apps\desktop\release\win-unpacked\MCPMender.exe"
-          $process = Start-Process -FilePath $executable -PassThru
-          if (-not $process.WaitForExit(30000)) {
-            Stop-Process -Id $process.Id -Force
-            throw "Windows smoke test timed out."
-          }
-          if (-not (Test-Path -LiteralPath $capturePath)) {
-            throw "Windows smoke test did not produce a UI capture."
-          }
+          .\tools\smoke-windows-release.ps1 `
+            -ExecutablePath $executable `
+            -CaptureTarget main `
+            -CapturePath (Join-Path $env:RUNNER_TEMP "mcpmender-windows-main.png")
+          .\tools\smoke-windows-release.ps1 `
+            -ExecutablePath $executable `
+            -CaptureTarget help `
+            -CapturePath (Join-Path $env:RUNNER_TEMP "mcpmender-windows-help.png")
 
-      - name: Create Windows checksums
+      - name: Archive Windows folder and create checksum
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          Get-ChildItem "apps\desktop\release\MCPMender-*-Windows-*.exe" |
-            ForEach-Object {
-              $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-              "$hash *$($_.Name)"
-            } | Set-Content "apps\desktop\release\SHA256SUMS-Windows-x64.txt" -Encoding ascii
+          $releaseRoot = Resolve-Path "apps\desktop\release"
+          $stageRoot = Join-Path $env:RUNNER_TEMP "mcpmender-windows-folder"
+          $stageDirectory = Join-Path $stageRoot "MCPMender"
+          New-Item -ItemType Directory -Force -Path $stageRoot | Out-Null
+          Copy-Item -LiteralPath "apps\desktop\release\win-unpacked" -Destination $stageDirectory -Recurse
+          if (-not (Test-Path -LiteralPath (Join-Path $stageDirectory "MCPMender.exe") -PathType Leaf)) {
+            throw "Windows archive staging directory is missing MCPMender.exe."
+          }
+          $zipPath = Join-Path $releaseRoot "MCPMender-Windows-x64.zip"
+          if (Test-Path -LiteralPath $zipPath) {
+            Remove-Item -LiteralPath $zipPath -Force
+          }
+          Add-Type -AssemblyName System.IO.Compression
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::Open(
+            $zipPath,
+            [System.IO.Compression.ZipArchiveMode]::Create
+          )
+          try {
+            Get-ChildItem -LiteralPath $stageDirectory -File -Recurse | ForEach-Object {
+              $relativePath = [System.IO.Path]::GetRelativePath($stageRoot, $_.FullName).Replace("\", "/")
+              [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                $archive,
+                $_.FullName,
+                $relativePath,
+                [System.IO.Compression.CompressionLevel]::Optimal
+              )
+            }
+          }
+          finally {
+            $archive.Dispose()
+          }
+          $hash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash *MCPMender-Windows-x64.zip" |
+            Set-Content (Join-Path $releaseRoot "SHA256SUMS-Windows-x64.txt") -Encoding ascii
 
       - name: Build Linux packages
         if: matrix.platform == 'linux'
@@ -104,9 +142,66 @@ jobs:
       - name: Smoke-test Linux package
         if: matrix.platform == 'linux'
         run: |
-          capture_path="$RUNNER_TEMP/mcpmender-linux.png"
-          MCPMENDER_CAPTURE_PATH="$capture_path" timeout 30s xvfb-run -a apps/desktop/release/linux-unpacked/mcpmender
-          test -s "$capture_path"
+          executable="apps/desktop/release/linux-unpacked/mcpmender"
+          for target in main help; do
+            capture_path="$RUNNER_TEMP/mcpmender-linux-$target.png"
+            data_dir="$RUNNER_TEMP/mcpmender-linux-$target-data"
+            temp_dir="$RUNNER_TEMP/mcpmender-linux-$target-temp"
+            mkdir -p "$data_dir" "$temp_dir"
+            if [ "$target" = help ]; then
+              MCPMENDER_CAPTURE_TARGET=help MCPMENDER_CAPTURE_PATH="$capture_path" MCPMENDER_DATA_DIR="$data_dir" \
+                TMPDIR="$temp_dir" timeout 45s xvfb-run -a "$executable"
+            else
+              MCPMENDER_CAPTURE_PATH="$capture_path" MCPMENDER_DATA_DIR="$data_dir" \
+                TMPDIR="$temp_dir" timeout 45s xvfb-run -a "$executable"
+            fi
+            node - "$capture_path" <<'NODE'
+          const fs = require("node:fs");
+          const zlib = require("node:zlib");
+          const path = process.argv[2];
+          const file = fs.readFileSync(path);
+          if (file.length < 1024 || file.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a") throw new Error("invalid or undersized PNG");
+          let offset = 8, width, height, type, depth, interlace, idat = [];
+          while (offset + 12 <= file.length) {
+            const length = file.readUInt32BE(offset);
+            const name = file.subarray(offset + 4, offset + 8).toString("ascii");
+            const data = file.subarray(offset + 8, offset + 8 + length);
+            if (offset + 12 + length > file.length) throw new Error("truncated PNG chunk");
+            if (name === "IHDR") {
+              width = data.readUInt32BE(0); height = data.readUInt32BE(4);
+              depth = data[8]; type = data[9]; interlace = data[12];
+            } else if (name === "IDAT") idat.push(data);
+            offset += 12 + length;
+          }
+          if (!width || !height || depth !== 8 || ![2, 6].includes(type) || interlace !== 0 || !idat.length) throw new Error("unsupported PNG layout");
+          const bpp = type === 6 ? 4 : 3, stride = width * bpp;
+          const raw = zlib.inflateSync(Buffer.concat(idat));
+          if (raw.length !== (stride + 1) * height) throw new Error("unexpected PNG data size");
+          const rows = []; let cursor = 0;
+          const paeth = (a,b,c) => { const p=a+b-c, pa=Math.abs(p-a), pb=Math.abs(p-b), pc=Math.abs(p-c); return pa<=pb&&pa<=pc?a:pb<=pc?b:c; };
+          for (let y=0; y<height; y++) {
+            const filter=raw[cursor++], row=Buffer.alloc(stride), prior=rows[y-1];
+            for (let x=0; x<stride; x++) {
+              const value=raw[cursor++], left=x>=bpp?row[x-bpp]:0, up=prior?prior[x]:0, upperLeft=prior&&x>=bpp?prior[x-bpp]:0;
+              row[x]=(value+(filter===0?0:filter===1?left:filter===2?up:filter===3?Math.floor((left+up)/2):filter===4?paeth(left,up,upperLeft):(()=>{throw new Error("unknown PNG filter")})()))&255;
+            }
+            rows.push(row);
+          }
+          const colors=new Set(), xStep=Math.max(1,Math.floor(width/48)), yStep=Math.max(1,Math.floor(height/32));
+          for (let y=0;y<height;y+=yStep) for (let x=0;x<width;x+=xStep) colors.add(rows[y].subarray(x*bpp,x*bpp+bpp).toString("hex"));
+          if (colors.size < 8) throw new Error(`visually blank capture: ${colors.size} sampled colors`);
+          console.log(`${path}: ${width}x${height}, ${colors.size} sampled colors`);
+          NODE
+          done
+          mapfile -t linux_archives < <(find apps/desktop/release -maxdepth 1 -type f -name 'MCPMender-*-Linux-*.tar.gz' -print)
+          test "${#linux_archives[@]}" -eq 1
+          archive="${linux_archives[0]}"
+          extract_dir="$RUNNER_TEMP/mcpmender-linux-tar"
+          mkdir -p "$extract_dir"
+          tar -xzf "$archive" -C "$extract_dir"
+          mapfile -t extracted_executables < <(find "$extract_dir" -mindepth 2 -type f -name mcpmender -perm -u+x -print)
+          test "${#extracted_executables[@]}" -eq 1
+          test -x "${extracted_executables[0]}"
 
       - name: Create Linux checksums
         if: matrix.platform == 'linux'
@@ -123,11 +218,56 @@ jobs:
       - name: Smoke-test macOS package
         if: matrix.platform == 'macos'
         run: |
-          capture_path="$RUNNER_TEMP/mcpmender-macos.png"
           executable="$(find apps/desktop/release -path '*/MCPMender.app/Contents/MacOS/MCPMender' -type f -print -quit)"
           test -n "$executable"
-          MCPMENDER_CAPTURE_PATH="$capture_path" "$executable"
-          test -s "$capture_path"
+          for target in main help; do
+            capture_path="$RUNNER_TEMP/mcpmender-macos-$target.png"
+            data_dir="$RUNNER_TEMP/mcpmender-macos-$target-data"
+            temp_dir="$RUNNER_TEMP/mcpmender-macos-$target-temp"
+            mkdir -p "$data_dir" "$temp_dir"
+            if [ "$target" = help ]; then
+              MCPMENDER_CAPTURE_TARGET=help MCPMENDER_CAPTURE_PATH="$capture_path" MCPMENDER_DATA_DIR="$data_dir" TMPDIR="$temp_dir" "$executable"
+            else
+              MCPMENDER_CAPTURE_PATH="$capture_path" MCPMENDER_DATA_DIR="$data_dir" TMPDIR="$temp_dir" "$executable"
+            fi
+            node - "$capture_path" <<'NODE'
+          const fs = require("node:fs");
+          const zlib = require("node:zlib");
+          const path = process.argv[2];
+          const file = fs.readFileSync(path);
+          if (file.length < 1024 || file.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a") throw new Error("invalid or undersized PNG");
+          let offset = 8, width, height, type, depth, interlace, idat = [];
+          while (offset + 12 <= file.length) {
+            const length = file.readUInt32BE(offset);
+            const name = file.subarray(offset + 4, offset + 8).toString("ascii");
+            const data = file.subarray(offset + 8, offset + 8 + length);
+            if (offset + 12 + length > file.length) throw new Error("truncated PNG chunk");
+            if (name === "IHDR") {
+              width = data.readUInt32BE(0); height = data.readUInt32BE(4);
+              depth = data[8]; type = data[9]; interlace = data[12];
+            } else if (name === "IDAT") idat.push(data);
+            offset += 12 + length;
+          }
+          if (!width || !height || depth !== 8 || ![2, 6].includes(type) || interlace !== 0 || !idat.length) throw new Error("unsupported PNG layout");
+          const bpp = type === 6 ? 4 : 3, stride = width * bpp;
+          const raw = zlib.inflateSync(Buffer.concat(idat));
+          if (raw.length !== (stride + 1) * height) throw new Error("unexpected PNG data size");
+          const rows = []; let cursor = 0;
+          const paeth = (a,b,c) => { const p=a+b-c, pa=Math.abs(p-a), pb=Math.abs(p-b), pc=Math.abs(p-c); return pa<=pb&&pa<=pc?a:pb<=pc?b:c; };
+          for (let y=0; y<height; y++) {
+            const filter=raw[cursor++], row=Buffer.alloc(stride), prior=rows[y-1];
+            for (let x=0; x<stride; x++) {
+              const value=raw[cursor++], left=x>=bpp?row[x-bpp]:0, up=prior?prior[x]:0, upperLeft=prior&&x>=bpp?prior[x-bpp]:0;
+              row[x]=(value+(filter===0?0:filter===1?left:filter===2?up:filter===3?Math.floor((left+up)/2):filter===4?paeth(left,up,upperLeft):(()=>{throw new Error("unknown PNG filter")})()))&255;
+            }
+            rows.push(row);
+          }
+          const colors=new Set(), xStep=Math.max(1,Math.floor(width/48)), yStep=Math.max(1,Math.floor(height/32));
+          for (let y=0;y<height;y+=yStep) for (let x=0;x<width;x+=xStep) colors.add(rows[y].subarray(x*bpp,x*bpp+bpp).toString("hex"));
+          if (colors.size < 8) throw new Error(`visually blank capture: ${colors.size} sampled colors`);
+          console.log(`${path}: ${width}x${height}, ${colors.size} sampled colors`);
+          NODE
+          done
           codesign --verify --deep --strict --verbose=2 "$(dirname "$(dirname "$(dirname "$executable")")")"
 
       - name: Create macOS checksums
@@ -142,7 +282,7 @@ jobs:
         with:
           name: MCPMender-${{ matrix.label }}
           path: |
-            apps/desktop/release/MCPMender-*-Windows-*.exe
+            apps/desktop/release/MCPMender-Windows-x64.zip
             apps/desktop/release/SHA256SUMS-Windows-x64.txt
           if-no-files-found: error
 
@@ -181,33 +321,100 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Verify release tag matches package version
+        if: github.ref_type == 'tag'
+        run: |
+          expected="v$(node -p "require('./package.json').version")"
+          test "$GITHUB_REF_NAME" = "$expected"
 
       - name: Audit production dependencies
         run: pnpm audit --prod --audit-level moderate
 
       - name: Pack and install-test CLI
         run: |
+          version="$(node -p "require('./package.json').version")"
+          expected_name="mcpmender-$version.tgz"
+          pack_dir="$RUNNER_TEMP/mcpmender-cli-pack"
+          rm -rf "$pack_dir"
+          mkdir -p "$pack_dir"
           pnpm --filter mcpmender build
-          package_path="$(pnpm --dir packages/cli pack --pack-destination "$RUNNER_TEMP" --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).filename))')"
+          pnpm --dir packages/cli pack --pack-destination "$pack_dir"
+          mapfile -t packed_archives < <(find "$pack_dir" -maxdepth 1 -type f -name '*.tgz' -print)
+          test "${#packed_archives[@]}" -eq 1
+          package_path="${packed_archives[0]}"
+          test "$(basename "$package_path")" = "$expected_name"
+          mapfile -t archive_entries < <(tar -tzf "$package_path")
+          for entry in "${archive_entries[@]}"; do
+            case "$entry" in
+              package/*) ;;
+              *) echo "Unsafe npm archive entry: $entry" >&2; exit 1 ;;
+            esac
+            case "/$entry/" in
+              *"/../"*|*"/./"*) echo "Unsafe npm archive path segment: $entry" >&2; exit 1 ;;
+            esac
+          done
+          for required in package/package.json package/README.md package/dist/mcpmender.cjs package/dist/LICENSE package/dist/THIRD_PARTY_NOTICES.md; do
+            printf '%s\n' "${archive_entries[@]}" | grep -Fqx "$required"
+          done
           install_dir="$RUNNER_TEMP/mcpmender-cli-install"
+          rm -rf "$install_dir"
           mkdir -p "$install_dir"
-          npm install --prefix "$install_dir" "$package_path"
-          "$install_dir/node_modules/.bin/mcpmender" --version
+          npm install --prefix "$install_dir" --ignore-scripts --no-audit --no-fund "$package_path"
+          test -x "$install_dir/node_modules/.bin/mcpmender"
+          test -f "$install_dir/node_modules/mcpmender/README.md"
+          test -f "$install_dir/node_modules/mcpmender/dist/mcpmender.cjs"
+          test -f "$install_dir/node_modules/mcpmender/dist/LICENSE"
+          test -f "$install_dir/node_modules/mcpmender/dist/THIRD_PARTY_NOTICES.md"
+          test "$("$install_dir/node_modules/.bin/mcpmender" --version)" = "$version"
           "$install_dir/node_modules/.bin/mcpmender" --help
-          cp "$package_path" "$RUNNER_TEMP/mcpmender-cli.tgz"
+          cp "$package_path" "$RUNNER_TEMP/$expected_name"
           cd "$RUNNER_TEMP"
-          sha256sum mcpmender-cli.tgz > mcpmender-cli.sha256
+          sha256sum "$expected_name" > "$expected_name.sha256"
+
+      - name: Generate production SBOM and notices
+        run: |
+          pnpm licenses list --prod --json > "$RUNNER_TEMP/production-licenses.json"
+          node tools/generate-compliance.mjs \
+            --input "$RUNNER_TEMP/production-licenses.json" \
+            --sbom "$RUNNER_TEMP/MCPMender.cdx.json" \
+            --notices "$RUNNER_TEMP/THIRD_PARTY_NOTICES.md"
 
       - name: Upload CLI package
         uses: actions/upload-artifact@v4
         with:
           name: mcpmender-cli
           path: |
-            ${{ runner.temp }}/mcpmender-cli.tgz
-            ${{ runner.temp }}/mcpmender-cli.sha256
+            ${{ runner.temp }}/mcpmender-*.tgz
+            ${{ runner.temp }}/mcpmender-*.tgz.sha256
+            ${{ runner.temp }}/MCPMender.cdx.json
+            ${{ runner.temp }}/THIRD_PARTY_NOTICES.md
           if-no-files-found: error
+
+  github-release:
+    name: Publish GitHub prerelease
+    if: github.ref_type == 'tag'
+    needs: [desktop, cli]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download validated artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create prerelease and upload artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --prerelease \
+            --generate-notes \
+            artifacts/*/*

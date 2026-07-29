@@ -1,6 +1,6 @@
 {
   "name": "mcpmender",
-  "version": "0.3.0-beta.1",
+  "version": "0.3.0-beta.2",
   "type": "module",
   "description": "MCPMender (协议修匠): cross-platform MCP configuration diagnostics, live handshake checks, and safe repair.",
   "author": "MCPMender contributors",

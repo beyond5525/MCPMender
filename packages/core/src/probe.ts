@@ -5,14 +5,19 @@ import {
   getDefaultEnvironment
 } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { resolveExecutable } from "./environment.js";
-import { redactText } from "./redaction.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import {
+  expandServerVariables,
+  resolveExecutable
+} from "./environment.js";
+import { redactReport, redactText } from "./redaction.js";
 import { scanMcpConfigurations } from "./scanner.js";
 import type {
   ProbeOptions,
   ProbeReport,
   ProbeResult,
   ProbeTarget,
+  ProbeTargetOptions,
   ServerDefinition
 } from "./types.js";
 
@@ -23,6 +28,13 @@ function safeDetail(error: unknown, extra = ""): string {
   return redactText(`${message}${extra ? ` · ${extra}` : ""}`, os.homedir())
     .replace(/\s+/g, " ")
     .slice(0, 500);
+}
+
+function targetTransport(target: ProbeTarget): "stdio" | "http" | "sse" {
+  return (
+    target.server.transport ??
+    (target.server.command ? "stdio" : target.server.url ? "http" : "stdio")
+  );
 }
 
 function classifyFailure(
@@ -50,7 +62,7 @@ function classifyFailure(
     clientName: target.clientName,
     configPath: target.configPath,
     serverName: target.server.name,
-    transport: target.server.url ? "http" : "stdio",
+    transport: targetTransport(target),
     status,
     durationMs: Date.now() - startedAt,
     messageKey:
@@ -66,13 +78,86 @@ function classifyFailure(
 }
 
 async function closeQuietly(
-  transport: StdioClientTransport | StreamableHTTPClientTransport | undefined
+  transport:
+    | StdioClientTransport
+    | StreamableHTTPClientTransport
+    | SSEClientTransport
+    | undefined
 ): Promise<void> {
   if (!transport) return;
   await Promise.race([
     transport.close().catch(() => undefined),
     new Promise<void>((resolve) => setTimeout(resolve, 750))
   ]);
+}
+
+function environmentValue(name: string): string | undefined {
+  const direct = process.env[name];
+  if (direct !== undefined || process.platform !== "win32") return direct;
+  const matchingKey = Object.keys(process.env).find(
+    (key) => key.toLowerCase() === name.toLowerCase()
+  );
+  return matchingKey ? process.env[matchingKey] : undefined;
+}
+
+function resolvedEnvironment(server: ServerDefinition): Record<string, string> {
+  const childEnvironment: Record<string, string> = {
+    ...getDefaultEnvironment()
+  };
+  for (const key of server.inheritEnvKeys ?? []) {
+    const value = environmentValue(key);
+    if (value !== undefined) childEnvironment[key] = value;
+  }
+  for (const [key, value] of Object.entries(server.env ?? {})) {
+    childEnvironment[key] = expandServerVariables(
+      value,
+      server.variableSyntax,
+      process.env,
+      process.platform,
+      server.workspaceDir
+    );
+  }
+  return childEnvironment;
+}
+
+function resolvedHeaders(server: ServerDefinition): Record<string, string> {
+  const headers = Object.fromEntries(
+    Object.entries(server.headers ?? {}).map(([name, value]) => [
+      name,
+      expandServerVariables(
+        value,
+        server.variableSyntax,
+        process.env,
+        process.platform,
+        server.workspaceDir
+      )
+    ])
+  );
+  for (const [headerName, environmentName] of Object.entries(
+    server.headerEnv ?? {}
+  )) {
+    const value = environmentValue(environmentName);
+    if (value !== undefined) headers[headerName] = value;
+  }
+  const hasAuthorization = Object.keys(headers).some(
+    (name) => name.toLowerCase() === "authorization"
+  );
+  if (server.bearerTokenEnvVar && !hasAuthorization) {
+    const token = environmentValue(server.bearerTokenEnvVar);
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+function mergeHeaders(
+  original: HeadersInit | undefined,
+  additions: Record<string, string>
+): Headers {
+  const headers = new Headers(original);
+  for (const [name, value] of Object.entries(additions)) {
+    headers.set(name, value);
+  }
+  return headers;
 }
 
 async function probeTarget(
@@ -84,6 +169,7 @@ async function probeTarget(
   let transport:
     | StdioClientTransport
     | StreamableHTTPClientTransport
+    | SSEClientTransport
     | undefined;
   let stderr = "";
 
@@ -102,13 +188,14 @@ async function probeTarget(
   }
 
   try {
-    if (server.command) {
-      const childEnvironment = {
-        ...getDefaultEnvironment(),
-        ...(server.env ?? {})
-      };
+    const transportKind = targetTransport(target);
+    if (transportKind === "stdio" && server.command) {
+      const childEnvironment = resolvedEnvironment(server);
       const executable = await resolveExecutable(server.command, {
-        environment: childEnvironment
+        environment: childEnvironment,
+        cwd: server.cwd,
+        variableSyntax: server.variableSyntax,
+        workspaceDir: server.workspaceDir
       });
       if (!executable) {
         return {
@@ -125,25 +212,78 @@ async function probeTarget(
       }
       transport = new StdioClientTransport({
         command: executable,
-        args: server.args,
-        cwd: server.cwd,
+        args: server.args.map((argument) =>
+          expandServerVariables(
+            argument,
+            server.variableSyntax,
+            process.env,
+            process.platform,
+            server.workspaceDir
+          )
+        ),
+        cwd: server.cwd
+          ? expandServerVariables(
+              server.cwd,
+              server.variableSyntax,
+              process.env,
+              process.platform,
+              server.workspaceDir
+            )
+          : undefined,
         env: childEnvironment,
         stderr: "pipe"
       });
       transport.stderr?.on("data", (chunk) => {
         stderr = `${stderr}${String(chunk)}`.slice(-2_000);
       });
+    } else if (server.url) {
+      const url = new URL(
+        expandServerVariables(
+          server.url,
+          server.variableSyntax,
+          process.env,
+          process.platform,
+          server.workspaceDir
+        )
+      );
+      const headers = resolvedHeaders(server);
+      if (transportKind === "sse") {
+        transport = new SSEClientTransport(url, {
+          eventSourceInit:
+            Object.keys(headers).length > 0
+              ? {
+                  fetch: (input, init) =>
+                    fetch(input, {
+                      ...init,
+                      headers: mergeHeaders(init.headers, headers)
+                    })
+                }
+              : undefined,
+          requestInit:
+            Object.keys(headers).length > 0 ? { headers } : undefined
+        });
+      } else {
+        transport = new StreamableHTTPClientTransport(url, {
+          requestInit:
+            Object.keys(headers).length > 0 ? { headers } : undefined
+        });
+      }
     } else {
-      transport = new StreamableHTTPClientTransport(new URL(server.url!), {
-        requestInit:
-          server.headers && Object.keys(server.headers).length > 0
-            ? { headers: server.headers }
-            : undefined
-      });
+      return {
+        clientId: target.clientId,
+        clientName: target.clientName,
+        configPath: target.configPath,
+        serverName: server.name,
+        transport: transportKind,
+        status: "unsupported",
+        durationMs: Date.now() - startedAt,
+        messageKey: "probe.unsupported",
+        detail: "The configured transport is missing its command or URL."
+      };
     }
 
     const client = new Client(
-      { name: "mcpmender-diagnostics", version: "0.3.0-beta.1" },
+      { name: "mcpmender-diagnostics", version: "0.3.0-beta.2" },
       { capabilities: {} }
     );
     const signal = AbortSignal.timeout(timeoutMs);
@@ -170,7 +310,7 @@ async function probeTarget(
       clientName: target.clientName,
       configPath: target.configPath,
       serverName: server.name,
-      transport: server.url ? "http" : "stdio",
+      transport: transportKind,
       status: "connected",
       durationMs: Date.now() - startedAt,
       serverNameReported: implementation?.name,
@@ -188,55 +328,73 @@ async function probeTarget(
   }
 }
 
-export async function planProbeTargets(
-  scanOptions: ProbeOptions["scanOptions"] = {}
-): Promise<ProbeTarget[]> {
-  const report = await scanMcpConfigurations(scanOptions);
+function eligibleProbeTargets(report: Awaited<
+  ReturnType<typeof scanMcpConfigurations>
+>): ProbeTarget[] {
   return report.clients.flatMap((client) =>
     client.parseable
-      ? client.servers.map((server) => ({
-          clientId: client.clientId,
-          clientName: client.displayName,
-          configPath: client.configPath,
-          server: {
-            ...server,
-            envKeys: undefined,
-            command: server.command
-              ? redactText(server.command, os.homedir())
-              : undefined,
-            args: server.args.map((argument) =>
-              redactText(argument, os.homedir())
-            ),
-            url: server.url
-              ? redactText(server.url, os.homedir())
-              : undefined
-          }
-        }))
+      ? client.servers
+          .filter(
+            (server) =>
+              server.enabled !== false &&
+              (server.unresolvedVariables?.length ?? 0) === 0
+          )
+          .map((server) => ({
+            clientId: client.clientId,
+            clientName: client.displayName,
+            configPath: client.configPath,
+            server
+          }))
       : []
   );
 }
 
-export async function probeMcpConfigurations(
-  options: ProbeOptions = {}
+export async function loadProbeTargets(
+  scanOptions: ProbeOptions["scanOptions"] = {}
+): Promise<ProbeTarget[]> {
+  const report = await scanMcpConfigurations({
+    ...(scanOptions ?? {}),
+    includeSensitive: true
+  });
+  return eligibleProbeTargets(report);
+}
+
+export function previewProbeTargets(
+  targets: ProbeTarget[]
+): ProbeTarget[] {
+  return targets.map((target) => ({
+    ...target,
+    server: redactReport(
+      {
+        ...target.server,
+        env: undefined,
+        envKeys: undefined,
+        headers: undefined
+      },
+      os.homedir()
+    )
+  }));
+}
+
+export async function planProbeTargets(
+  scanOptions: ProbeOptions["scanOptions"] = {}
+): Promise<ProbeTarget[]> {
+  return previewProbeTargets(await loadProbeTargets(scanOptions));
+}
+
+export async function probeMcpTargets(
+  inputTargets: ProbeTarget[],
+  options: ProbeTargetOptions = {}
 ): Promise<ProbeReport> {
   const timeoutMs = Math.min(
     60_000,
     Math.max(1_000, options.timeoutMs ?? DEFAULT_TIMEOUT_MS)
   );
   const concurrency = Math.min(4, Math.max(1, options.concurrency ?? 2));
-  const report = await scanMcpConfigurations({
-    ...(options.scanOptions ?? {}),
-    includeSensitive: true
-  });
-  let targets = report.clients.flatMap((client) =>
-    client.parseable
-      ? client.servers.map((server) => ({
-          clientId: client.clientId,
-          clientName: client.displayName,
-          configPath: client.configPath,
-          server
-        }))
-      : []
+  let targets = inputTargets.filter(
+    (target) =>
+      target.server.enabled !== false &&
+      (target.server.unresolvedVariables?.length ?? 0) === 0
   );
   if (options.serverNames && options.serverNames.length > 0) {
     const selected = new Set(options.serverNames);
@@ -261,7 +419,7 @@ export async function probeMcpConfigurations(
   return {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
-    platform: options.scanOptions?.platform ?? process.platform,
+    platform: options.platform ?? process.platform,
     results,
     summary: {
       total: results.length,
@@ -276,6 +434,18 @@ export async function probeMcpConfigurations(
       ).length
     }
   };
+}
+
+export async function probeMcpConfigurations(
+  options: ProbeOptions = {}
+): Promise<ProbeReport> {
+  const targets = await loadProbeTargets(options.scanOptions);
+  return probeMcpTargets(targets, {
+    timeoutMs: options.timeoutMs,
+    concurrency: options.concurrency,
+    serverNames: options.serverNames,
+    platform: options.scanOptions?.platform
+  });
 }
 
 export function describeProbeTarget(server: ServerDefinition): string {

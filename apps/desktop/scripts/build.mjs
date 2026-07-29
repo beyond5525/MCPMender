@@ -1,5 +1,6 @@
 import { copyFile, mkdir, rm } from "node:fs/promises";
 import { build } from "esbuild";
+import path from "node:path";
 
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist", { recursive: true });
@@ -9,6 +10,9 @@ await Promise.all([
     entryPoints: ["src/main.ts"],
     outfile: "dist/main.cjs",
     bundle: true,
+    alias: {
+      "@mcpmender/core": path.resolve("../../packages/core/src/index.ts")
+    },
     platform: "node",
     format: "cjs",
     mainFields: ["module", "main"],
