@@ -55,7 +55,7 @@ describe("privacy", () => {
   });
 
   it("does not expose configured secrets in a probe preview", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "mcpulse-preview-"));
+    const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-preview-"));
     const configPath = path.join(root, "mcp.json");
     await writeFile(
       configPath,
@@ -92,7 +92,7 @@ describe("privacy", () => {
 
 describe("scan and safe repair", () => {
   it("finds and safely wraps npx on Windows", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "mcpulse-test-"));
+    const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-test-"));
     const configPath = path.join(root, "mcp.json");
     await mkdir(path.dirname(configPath), { recursive: true });
     await writeFile(
@@ -169,7 +169,7 @@ describe("scan and safe repair", () => {
   });
 
   it("reports missing commands, variables, and invalid URLs", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "mcpulse-static-"));
+    const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-static-"));
     const configPath = path.join(root, "mcp.json");
     await writeFile(
       configPath,
@@ -177,7 +177,7 @@ describe("scan and safe repair", () => {
         mcpServers: {
           missing: {
             command: "definitely-not-a-real-mcp-command",
-            args: ["${MCPULSE_TEST_MISSING}"]
+            args: ["${MCPMENDER_TEST_MISSING}"]
           },
           remote: { url: "file:///not-an-http-endpoint" }
         }
@@ -204,7 +204,7 @@ describe("scan and safe repair", () => {
   });
 
   it("performs a real stdio MCP initialize handshake", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "mcpulse-probe-"));
+    const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-probe-"));
     const serverPath = path.join(root, "fake-mcp-server.mjs");
     const configPath = path.join(root, "mcp.json");
     await writeFile(
@@ -220,7 +220,7 @@ lines.on("line", (line) => {
       result: {
         protocolVersion: message.params.protocolVersion,
         capabilities: { tools: {} },
-        serverInfo: { name: "mcpulse-test-server", version: "1.0.0" }
+        serverInfo: { name: "mcpmender-test-server", version: "1.0.0" }
       }
     }) + "\\n");
   } else if (message.method === "tools/list") {
@@ -260,7 +260,7 @@ lines.on("line", (line) => {
     expect(report.summary.connected).toBe(1);
     expect(report.results[0]).toMatchObject({
       status: "connected",
-      serverNameReported: "mcpulse-test-server",
+      serverNameReported: "mcpmender-test-server",
       toolCount: 0
     });
   });
@@ -288,7 +288,7 @@ lines.on("line", (line) => {
                 protocolVersion: message.params.protocolVersion,
                 capabilities: { tools: {} },
                 serverInfo: {
-                  name: "mcpulse-http-test",
+                  name: "mcpmender-http-test",
                   version: "1.0.0"
                 }
               }
@@ -307,7 +307,7 @@ lines.on("line", (line) => {
       if (!address || typeof address === "string") {
         throw new Error("HTTP test server did not bind");
       }
-      const root = await mkdtemp(path.join(os.tmpdir(), "mcpulse-http-"));
+      const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-http-"));
       const configPath = path.join(root, "mcp.json");
       await writeFile(
         configPath,
@@ -334,7 +334,7 @@ lines.on("line", (line) => {
       expect(report.results[0]).toMatchObject({
         status: "connected",
         transport: "http",
-        serverNameReported: "mcpulse-http-test",
+        serverNameReported: "mcpmender-http-test",
         toolCount: 0
       });
     } finally {

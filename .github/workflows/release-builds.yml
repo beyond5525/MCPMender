@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: native-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   desktop:
     name: Desktop (${{ matrix.label }})
@@ -50,6 +54,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level moderate
+
       - name: Test and type-check
         run: |
           pnpm test
@@ -59,16 +66,16 @@ jobs:
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          pnpm --filter @mcpulse/desktop build
-          pnpm --filter @mcpulse/desktop exec electron-builder --win portable --x64
+          pnpm --filter @mcpmender/desktop build
+          pnpm --filter @mcpmender/desktop exec electron-builder --win portable --x64
 
       - name: Smoke-test Windows package
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          $capturePath = Join-Path $env:RUNNER_TEMP "mcpulse-windows.png"
-          $env:MCPULSE_CAPTURE_PATH = $capturePath
-          $executable = "apps\desktop\release\win-unpacked\MCPulse.exe"
+          $capturePath = Join-Path $env:RUNNER_TEMP "mcpmender-windows.png"
+          $env:MCPMENDER_CAPTURE_PATH = $capturePath
+          $executable = "apps\desktop\release\win-unpacked\MCPMender.exe"
           $process = Start-Process -FilePath $executable -PassThru
           if (-not $process.WaitForExit(30000)) {
             Stop-Process -Id $process.Id -Force
@@ -78,60 +85,87 @@ jobs:
             throw "Windows smoke test did not produce a UI capture."
           }
 
+      - name: Create Windows checksums
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          Get-ChildItem "apps\desktop\release\MCPMender-*-Windows-*.exe" |
+            ForEach-Object {
+              $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+              "$hash *$($_.Name)"
+            } | Set-Content "apps\desktop\release\SHA256SUMS-Windows-x64.txt" -Encoding ascii
+
       - name: Build Linux packages
         if: matrix.platform == 'linux'
         run: |
-          pnpm --filter @mcpulse/desktop build
-          pnpm --filter @mcpulse/desktop exec electron-builder --linux AppImage tar.gz --x64
+          pnpm --filter @mcpmender/desktop build
+          pnpm --filter @mcpmender/desktop exec electron-builder --linux AppImage tar.gz --x64
 
       - name: Smoke-test Linux package
         if: matrix.platform == 'linux'
         run: |
-          capture_path="$RUNNER_TEMP/mcpulse-linux.png"
-          MCPULSE_CAPTURE_PATH="$capture_path" timeout 30s xvfb-run -a apps/desktop/release/linux-unpacked/mcpulse
+          capture_path="$RUNNER_TEMP/mcpmender-linux.png"
+          MCPMENDER_CAPTURE_PATH="$capture_path" timeout 30s xvfb-run -a apps/desktop/release/linux-unpacked/mcpmender
           test -s "$capture_path"
+
+      - name: Create Linux checksums
+        if: matrix.platform == 'linux'
+        run: |
+          cd apps/desktop/release
+          sha256sum MCPMender-*-Linux-*.AppImage MCPMender-*-Linux-*.tar.gz > SHA256SUMS-Linux-x64.txt
 
       - name: Build macOS packages
         if: matrix.platform == 'macos'
         run: |
-          pnpm --filter @mcpulse/desktop build
-          pnpm --filter @mcpulse/desktop exec electron-builder --mac dmg zip --${{ matrix.arch }}
+          pnpm --filter @mcpmender/desktop build
+          pnpm --filter @mcpmender/desktop exec electron-builder --mac dmg zip --${{ matrix.arch }}
 
       - name: Smoke-test macOS package
         if: matrix.platform == 'macos'
         run: |
-          capture_path="$RUNNER_TEMP/mcpulse-macos.png"
-          executable="$(find apps/desktop/release -path '*/MCPulse.app/Contents/MacOS/MCPulse' -type f -print -quit)"
+          capture_path="$RUNNER_TEMP/mcpmender-macos.png"
+          executable="$(find apps/desktop/release -path '*/MCPMender.app/Contents/MacOS/MCPMender' -type f -print -quit)"
           test -n "$executable"
-          MCPULSE_CAPTURE_PATH="$capture_path" "$executable"
+          MCPMENDER_CAPTURE_PATH="$capture_path" "$executable"
           test -s "$capture_path"
+          codesign --verify --deep --strict --verbose=2 "$(dirname "$(dirname "$(dirname "$executable")")")"
+
+      - name: Create macOS checksums
+        if: matrix.platform == 'macos'
+        run: |
+          cd apps/desktop/release
+          shasum -a 256 MCPMender-*-macOS-*.dmg MCPMender-*-macOS-*.zip > "SHA256SUMS-macOS-${{ matrix.arch }}.txt"
 
       - name: Upload Windows package
         if: matrix.platform == 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: MCPulse-${{ matrix.label }}
-          path: apps/desktop/release/MCPulse-*-Windows-*.exe
+          name: MCPMender-${{ matrix.label }}
+          path: |
+            apps/desktop/release/MCPMender-*-Windows-*.exe
+            apps/desktop/release/SHA256SUMS-Windows-x64.txt
           if-no-files-found: error
 
       - name: Upload Linux packages
         if: matrix.platform == 'linux'
         uses: actions/upload-artifact@v4
         with:
-          name: MCPulse-${{ matrix.label }}
+          name: MCPMender-${{ matrix.label }}
           path: |
-            apps/desktop/release/MCPulse-*-Linux-*.AppImage
-            apps/desktop/release/MCPulse-*-Linux-*.tar.gz
+            apps/desktop/release/MCPMender-*-Linux-*.AppImage
+            apps/desktop/release/MCPMender-*-Linux-*.tar.gz
+            apps/desktop/release/SHA256SUMS-Linux-x64.txt
           if-no-files-found: error
 
       - name: Upload macOS packages
         if: matrix.platform == 'macos'
         uses: actions/upload-artifact@v4
         with:
-          name: MCPulse-${{ matrix.label }}
+          name: MCPMender-${{ matrix.label }}
           path: |
-            apps/desktop/release/MCPulse-*-macOS-*.dmg
-            apps/desktop/release/MCPulse-*-macOS-*.zip
+            apps/desktop/release/MCPMender-*-macOS-*.dmg
+            apps/desktop/release/MCPMender-*-macOS-*.zip
+            apps/desktop/release/SHA256SUMS-macOS-${{ matrix.arch }}.txt
           if-no-files-found: error
 
   cli:
@@ -153,20 +187,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level moderate
+
       - name: Pack and install-test CLI
         run: |
-          pnpm --filter @mcpulse/cli build
+          pnpm --filter mcpmender build
           package_path="$(pnpm --dir packages/cli pack --pack-destination "$RUNNER_TEMP" --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).filename))')"
-          install_dir="$RUNNER_TEMP/mcpulse-cli-install"
+          install_dir="$RUNNER_TEMP/mcpmender-cli-install"
           mkdir -p "$install_dir"
           npm install --prefix "$install_dir" "$package_path"
-          "$install_dir/node_modules/.bin/mcpulse" --version
-          "$install_dir/node_modules/.bin/mcpulse" --help
-          cp "$package_path" "$RUNNER_TEMP/mcpulse-cli.tgz"
+          "$install_dir/node_modules/.bin/mcpmender" --version
+          "$install_dir/node_modules/.bin/mcpmender" --help
+          cp "$package_path" "$RUNNER_TEMP/mcpmender-cli.tgz"
+          cd "$RUNNER_TEMP"
+          sha256sum mcpmender-cli.tgz > mcpmender-cli.sha256
 
       - name: Upload CLI package
         uses: actions/upload-artifact@v4
         with:
-          name: mcpulse-cli
-          path: ${{ runner.temp }}/mcpulse-cli.tgz
+          name: mcpmender-cli
+          path: |
+            ${{ runner.temp }}/mcpmender-cli.tgz
+            ${{ runner.temp }}/mcpmender-cli.sha256
           if-no-files-found: error

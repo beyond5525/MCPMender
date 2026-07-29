@@ -1,0 +1,87 @@
+name: Bug report
+description: Report a reproducible MCPMender problem without sharing secrets.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve MCPMender（协议修匠）. This is a public form.
+        Remove tokens, headers, environment values, private paths, and raw MCP
+        configuration. Security vulnerabilities belong in private GitHub
+        Security Advisories, not this form.
+  - type: input
+    id: version
+    attributes:
+      label: MCPMender version
+      placeholder: 0.3.0-beta.1
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - Desktop
+        - CLI
+        - Offline handbook
+        - Packaging or installation
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      description: Include version and architecture, for example Windows 11 x64.
+    validations:
+      required: true
+  - type: dropdown
+    id: operation
+    attributes:
+      label: Operation
+      options:
+        - Static scan
+        - Deep-check preview
+        - Confirmed deep check
+        - Safe repair or rollback
+        - Report export
+        - Language or help
+        - Startup or installation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the actual and expected result.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Use sanitized placeholders instead of real secrets or paths.
+      placeholder: |
+        1. Open...
+        2. Select...
+        3. Observe...
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence
+      description: Optional logs, screenshots, or report fragments after review.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed credentials, private paths, and raw configuration.
+          required: true
+        - label: This is not an undisclosed security vulnerability.
+          required: true

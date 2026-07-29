@@ -1,0 +1,60 @@
+name: Feature request
+description: Suggest a focused improvement to MCPMender.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Explain the user problem before proposing an implementation. MCPMender
+        keeps static scans read-only and requires explicit action before running
+        configured third-party code.
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Who is blocked, and what are they trying to accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful outcome.
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - Desktop
+        - CLI
+        - Core diagnostics
+        - Repair
+        - Documentation or translation
+        - Packaging
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety and privacy impact
+      description: Could it execute code, contact a server, write a file, or expose data?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing Issues for a similar request.
+          required: true
+        - label: I did not include credentials or private configuration.
+          required: true

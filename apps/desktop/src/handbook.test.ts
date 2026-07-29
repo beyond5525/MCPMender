@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const handbookPath = path.resolve(
   process.cwd(),
-  "../../docs/MCPulse-Handbook.html"
+  "../../docs/MCPMender-Handbook.html"
 );
 
 describe("offline handbook", () => {
@@ -14,7 +14,7 @@ describe("offline handbook", () => {
     expect(html).toContain('<option value="en">English</option>');
     expect(html).toContain('<option value="zh-CN">简体中文</option>');
     expect(html).toContain('<option value="ja">日本語</option>');
-    expect(html.match(/mcpulse probe --run/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(html.match(/mcpmender probe --run/g)?.length).toBeGreaterThanOrEqual(3);
     expect(html).toContain("深度连接检测");
     expect(html).toContain("詳細接続診断");
 
