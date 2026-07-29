@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MCPulse Handbook</title>
+  <title>MCPMender Handbook</title>
   <style>
     :root {
       color-scheme: dark;
@@ -278,7 +278,7 @@
     <aside>
       <div class="brand">
         <span class="logo">M</span>
-        <div><strong>MCPulse</strong><small id="edition"></small></div>
+        <div><strong>MCPMender · 协议修匠</strong><small id="edition"></small></div>
       </div>
       <select id="language" class="language" aria-label="Language">
         <option value="en">English</option>
@@ -294,55 +294,55 @@
   <script>
     const handbook = {
       en: {
-        edition: "Offline Handbook · v0.2",
+        edition: "Offline Handbook · 0.3.0-beta.1",
         printLabel: "Print / Save PDF",
-        sideNote: "This handbook is included with MCPulse and works completely offline. Use your browser’s Print command to save the current language as PDF.",
+        sideNote: "This handbook is included with MCPMender and works completely offline. Use your browser’s Print command to save the current language as PDF.",
         hero: {
           eyebrow: "GET STARTED WITH CONFIDENCE",
           title: "Understand, diagnose, and safely repair MCP connections",
-          text: "MCPulse helps Codex, Claude, Cursor, VS Code, Gemini CLI, and OpenCode connect to local and remote MCP tools. This guide explains every important workflow without assuming prior MCP knowledge.",
+          text: "MCPMender helps Codex, Claude, Cursor, VS Code, Gemini CLI, and OpenCode connect to local and remote MCP tools. This guide explains every important workflow without assuming prior MCP knowledge.",
           pills: ["Windows · macOS · Linux", "CLI + Desktop", "Local only", "English · 中文 · 日本語"]
         },
         sections: [
           {
-            id: "understand", title: "1. What MCPulse does", lead: "Think of MCP as a plug that lets an AI developer tool use GitHub, browsers, databases, and local utilities. MCPulse is the connection doctor for that plug.",
+            id: "understand", title: "1. What MCPMender does", lead: "Think of MCP as a plug that lets an AI developer tool use GitHub, browsers, databases, and local utilities. MCPMender is the connection doctor for that plug.",
             html: `<div class="cards">
               <div class="card"><strong>Discover</strong><p>Find installed AI tool configurations without creating or changing them.</p></div>
               <div class="card"><strong>Diagnose</strong><p>Explain path, command, environment, syntax, and connection problems in plain language.</p></div>
               <div class="card"><strong>Repair safely</strong><p>Preview deterministic low-risk fixes, back up the original, apply, and verify.</p></div>
               <div class="card"><strong>Share evidence</strong><p>Export a redacted report for maintainers or support without exposing common secrets.</p></div>
             </div>
-            <div class="callout"><strong>What MCPulse is not</strong><p>It is not an AI chat client, an MCP marketplace, or a background cloud service. It runs locally when you ask it to.</p></div>`
+            <div class="callout"><strong>What MCPMender is not</strong><p>It is not an AI chat client, an MCP marketplace, or a background cloud service. It runs locally when you ask it to.</p></div>`
           },
           {
             id: "quick-start", title: "2. Five-minute quick start", lead: "The Desktop is the easiest route. The CLI offers the same core behavior for terminal users and automation.",
             html: `<h3>Desktop</h3><ol class="steps">
-              <li>Download the package for your operating system and open MCPulse.</li>
+              <li>Download the package for your operating system and open MCPMender.</li>
               <li>Choose your language in the top-right corner. The choice is remembered.</li>
-              <li>Select a project folder when you want MCPulse to include project-level VS Code configuration.</li>
+              <li>Select a project folder when you want MCPMender to include project-level VS Code configuration.</li>
               <li>Select <strong>Scan now</strong>. The default scan is read-only.</li>
               <li>Review each client card and its green, yellow, or red result.</li>
               <li>When you need proof that a server can really start and speak MCP, select <strong>Deep connection check</strong>, review the commands, and confirm.</li>
               <li>If safe repairs are available, open the preview and confirm only after reviewing the before/after command.</li>
             </ol>
-            <h3>CLI</h3><pre>mcpulse scan
-mcpulse scan --lang zh-CN
-mcpulse scan --lang ja
-mcpulse scan --json
-mcpulse probe
-mcpulse probe --run</pre>`
+            <h3>CLI</h3><p>Install Node.js 20 or later, then run <code>npm install --global mcpmender@beta</code>.</p><pre>mcpmender scan
+mcpmender scan --lang zh-CN
+mcpmender scan --lang ja
+mcpmender scan --json
+mcpmender probe
+mcpmender probe --run</pre>`
           },
           {
             id: "desktop", title: "3. Desktop interface", lead: "The dashboard keeps diagnosis understandable even if you do not normally use a terminal.",
             html: `<table><thead><tr><th>Area</th><th>Purpose</th></tr></thead><tbody>
               <tr><td>Summary cards</td><td>Show detected clients, configured servers, problems, and safe repairs.</td></tr>
               <tr><td>Client cards</td><td>Show the exact configuration path, server count, status, and findings for each supported AI tool.</td></tr>
-              <tr><td>Select project folder</td><td>Adds the selected project’s <code>.vscode/mcp.json</code> to scan and deep-check scope. MCPulse never guesses from the portable EXE extraction folder.</td></tr>
+              <tr><td>Select project folder</td><td>Adds the selected project’s <code>.vscode/mcp.json</code> to scan and deep-check scope. MCPMender never guesses from the portable EXE extraction folder.</td></tr>
               <tr><td>Scan now</td><td>Repeats a read-only discovery and static validation pass.</td></tr>
               <tr><td>Deep connection check</td><td>After confirmation, temporarily starts local servers or contacts remote endpoints, performs a real MCP handshake, lists tools when supported, and closes the connection.</td></tr>
               <tr><td>Repair safe issues</td><td>Opens a before/after preview. It does not write immediately.</td></tr>
               <tr><td>Export report</td><td>Creates a structured JSON report with home paths and common token patterns redacted.</td></tr>
-              <tr><td>Tutorial & help</td><td>Opens this offline handbook in a separate MCPulse window.</td></tr>
+              <tr><td>Tutorial & help</td><td>Opens this offline handbook in a separate MCPMender window.</td></tr>
             </tbody></table>`
           },
           {
@@ -350,7 +350,7 @@ mcpulse probe --run</pre>`
             html: `<table><thead><tr><th>Status</th><th>Meaning</th><th>What to do</th></tr></thead><tbody>
               <tr><td>Green · Healthy</td><td>No known problem was found by the checks that ran.</td><td>Use Deep connection check when you also need to verify server startup and the MCP handshake.</td></tr>
               <tr><td>Yellow · Needs attention</td><td>A common compatibility risk was found.</td><td>Read the explanation and preview any offered fix.</td></tr>
-              <tr><td>Red · Problem found</td><td>The configuration is invalid or incomplete.</td><td>Do not force an automatic repair unless MCPulse explicitly marks one safe.</td></tr>
+              <tr><td>Red · Problem found</td><td>The configuration is invalid or incomplete.</td><td>Do not force an automatic repair unless MCPMender explicitly marks one safe.</td></tr>
               <tr><td>Gray · Not configured</td><td>No supported configuration file was found at the checked path.</td><td>This is normal if you do not use that client.</td></tr>
             </tbody></table>
             <div class="callout warning"><strong>Important</strong><p>“Healthy” means the performed checks passed. It does not prove that a third-party server is trustworthy or that an account is authorized.</p></div>`
@@ -358,40 +358,40 @@ mcpulse probe --run</pre>`
           {
             id: "repair", title: "5. One-click repair, backup, and rollback", lead: "One-click repair is deliberately limited to deterministic changes with a clear expected result.",
             html: `<ol class="steps">
-              <li>MCPulse scans the file and records its content hash.</li>
+              <li>MCPMender scans the file and records its content hash.</li>
               <li>You see the exact command before and after the proposed repair.</li>
-              <li>When confirmed, MCPulse checks that the file did not change after the scan.</li>
+              <li>When confirmed, MCPMender checks that the file did not change after the scan.</li>
               <li>The original file is copied into a local transaction backup.</li>
               <li>The change is applied and the resulting syntax is validated.</li>
               <li>If validation fails, the original is restored.</li>
             </ol>
-            <h3>CLI repair commands</h3><pre>mcpulse repair --plan
-mcpulse repair --apply-safe</pre>
+            <h3>CLI repair commands</h3><pre>mcpmender repair
+mcpmender repair --apply-safe</pre>
             <div class="callout warning"><strong>Never treat “one click” as “blind trust”</strong><p>Credentials, enterprise policy, firewall changes, remote outages, and unknown server behavior require user or administrator decisions and should not be auto-fixed.</p></div>`
           },
           {
             id: "cli", title: "6. Command-line reference", lead: "The CLI is useful on developer machines, remote systems, CI, and support sessions.",
             html: `<table><thead><tr><th>Command</th><th>Result</th></tr></thead><tbody>
-              <tr><td><code>mcpulse scan</code></td><td>Human-readable local scan.</td></tr>
-              <tr><td><code>mcpulse scan --json</code></td><td>Machine-readable, redacted report.</td></tr>
-              <tr><td><code>mcpulse scan --lang en</code></td><td>English output.</td></tr>
-              <tr><td><code>mcpulse scan --lang zh-CN</code></td><td>Simplified Chinese output.</td></tr>
-              <tr><td><code>mcpulse scan --lang ja</code></td><td>Japanese output.</td></tr>
-              <tr><td><code>mcpulse probe</code></td><td>Preview every command or remote endpoint that a deep check would use. Nothing is started.</td></tr>
-              <tr><td><code>mcpulse probe --run</code></td><td>Perform real MCP initialize handshakes with an 8-second timeout and guaranteed connection cleanup.</td></tr>
-              <tr><td><code>mcpulse probe --run --server name</code></td><td>Deep-check only one named server.</td></tr>
-              <tr><td><code>mcpulse repair --plan</code></td><td>Show safe repair proposals without writing.</td></tr>
-              <tr><td><code>mcpulse repair --apply-safe</code></td><td>Back up and apply eligible safe repairs.</td></tr>
+              <tr><td><code>mcpmender scan</code></td><td>Human-readable local scan.</td></tr>
+              <tr><td><code>mcpmender scan --json</code></td><td>Machine-readable, redacted report.</td></tr>
+              <tr><td><code>mcpmender scan --lang en</code></td><td>English output.</td></tr>
+              <tr><td><code>mcpmender scan --lang zh-CN</code></td><td>Simplified Chinese output.</td></tr>
+              <tr><td><code>mcpmender scan --lang ja</code></td><td>Japanese output.</td></tr>
+              <tr><td><code>mcpmender probe</code></td><td>Preview every command or remote endpoint that a deep check would use. Nothing is started.</td></tr>
+              <tr><td><code>mcpmender probe --run</code></td><td>Perform real MCP initialize handshakes with an 8-second timeout and guaranteed connection cleanup.</td></tr>
+              <tr><td><code>mcpmender probe --run --server name</code></td><td>Deep-check only one named server.</td></tr>
+              <tr><td><code>mcpmender repair</code></td><td>Show safe repair proposals without writing.</td></tr>
+              <tr><td><code>mcpmender repair --apply-safe</code></td><td>Back up and apply eligible safe repairs.</td></tr>
             </tbody></table>`
           },
           {
-            id: "privacy", title: "7. Privacy and security", lead: "MCP configurations may contain sensitive paths and credentials. MCPulse is designed to minimize unnecessary exposure.",
+            id: "privacy", title: "7. Privacy and security", lead: "MCP configurations may contain sensitive paths and credentials. MCPMender is designed to minimize unnecessary exposure.",
             html: `<ul>
-              <li>No account, telemetry, or MCPulse cloud service is required.</li>
+              <li>No account, telemetry, or MCPMender cloud service is required.</li>
               <li>The default scan reads known configuration locations locally.</li>
               <li>Exported reports replace the user home path and common token shapes.</li>
               <li>Backups remain local and may still contain original secrets; protect them like the source configuration.</li>
-              <li>MCPulse does not claim that a discovered MCP server is safe.</li>
+              <li>MCPMender does not claim that a discovered MCP server is safe.</li>
               <li>Deep connection check always shows a preview and requires confirmation because configured commands can execute third-party code and <code>npx</code> may download packages.</li>
               <li>Every deep check has a timeout and closes its process or HTTP connection when finished.</li>
             </ul>
@@ -400,9 +400,9 @@ mcpulse repair --apply-safe</pre>
           {
             id: "platforms", title: "8. Windows, macOS, Linux, and WSL", lead: "The core concepts are shared, but process launching and configuration paths differ.",
             html: `<table><thead><tr><th>Platform</th><th>Common concern</th></tr></thead><tbody>
-              <tr><td>Windows</td><td>Use the portable <code>.exe</code>; no installation is required. <code>npx.cmd</code> and other wrappers may require <code>cmd /c</code>, and spaces in paths matter.</td></tr>
-              <tr><td>macOS</td><td>Choose the Apple Silicon or Intel package, open the DMG, and move MCPulse to Applications. Unsigned development builds may require explicit approval in Privacy &amp; Security.</td></tr>
-              <tr><td>Linux</td><td>Make the AppImage executable with <code>chmod +x</code> and run it, or extract the tar.gz and run <code>mcpulse</code>. Missing shared libraries vary by distribution.</td></tr>
+              <tr><td>Windows</td><td>Extract the archive and run the portable <code>.exe</code>; no installation is required. A beta self-signed signature is not automatically trusted by Windows or SmartScreen. Verify the published SHA-256 checksum before accepting a warning. <code>npx.cmd</code> and other wrappers may require <code>cmd /c</code>, and spaces in paths matter.</td></tr>
+              <tr><td>macOS</td><td>Choose the Apple Silicon or Intel package, open the DMG, and move MCPMender to Applications. A beta ad-hoc signature does not establish developer identity, is not trusted by Gatekeeper, and may require explicit approval in Privacy &amp; Security after checksum verification.</td></tr>
+              <tr><td>Linux</td><td>Make the AppImage executable with <code>chmod +x</code> and run it, or extract the tar.gz and run <code>mcpmender</code>. Missing shared libraries vary by distribution.</td></tr>
               <tr><td>WSL</td><td>Do not mix a Windows executable with a Linux path, or a Linux executable with an unconverted Windows path.</td></tr>
             </tbody></table>
             <div class="callout"><strong>CLI on every platform</strong><p>Install the CLI package with Node.js 20 or later. Desktop and CLI do not need to stay running in the background. Native release builds are smoke-tested on their target operating systems; verify the checksum shown on the release page before opening a downloaded package.</p></div>`
@@ -410,7 +410,7 @@ mcpulse repair --apply-safe</pre>
           {
             id: "reports", title: "9. Reports and asking for help", lead: "A useful support report describes what was checked, what failed, and what changed—without casually exposing secrets.",
             html: `<h3>Include</h3><ul>
-              <li>MCPulse version, operating system, and affected client.</li>
+              <li>MCPMender version, operating system, and affected client.</li>
               <li>The redacted JSON report.</li>
               <li>The exact user-visible error and whether the server works in another client.</li>
               <li>Whether the problem started after a client, runtime, or server update.</li>
@@ -422,14 +422,15 @@ mcpulse repair --apply-safe</pre>
           },
           {
             id: "faq", title: "10. Frequently asked questions", lead: "Quick answers to the questions most users encounter first.",
-            html: `<details open><summary>Does MCPulse modify my files during Scan?</summary><p>No. Scan is read-only. A file is changed only after you open a repair preview and explicitly confirm an eligible repair.</p></details>
-            <details><summary>Why does Scan finish without proving the server works?</summary><p>Scan checks files, syntax, commands, environment references, and URLs without running third-party code. Use Deep connection check when you explicitly want MCPulse to start or contact the configured server and perform a real handshake.</p></details>
-            <details><summary>Why is a client shown as Not configured?</summary><p>MCPulse did not find a supported configuration file at its known location. This is normal when the client is not installed or has never configured MCP.</p></details>
-            <details><summary>Can MCPulse create or recover my token?</summary><p>No. It can identify that a required environment variable is absent, but authentication remains with the relevant provider.</p></details>
+            html: `<details open><summary>Does MCPMender modify my files during Scan?</summary><p>No. Scan is read-only. A file is changed only after you open a repair preview and explicitly confirm an eligible repair.</p></details>
+            <details><summary>Why does Scan finish without proving the server works?</summary><p>Scan checks files, syntax, commands, environment references, and URLs without running third-party code. Use Deep connection check when you explicitly want MCPMender to start or contact the configured server and perform a real handshake.</p></details>
+            <details><summary>Why is a client shown as Not configured?</summary><p>MCPMender did not find a supported configuration file at its known location. This is normal when the client is not installed or has never configured MCP.</p></details>
+            <details><summary>Can MCPMender create or recover my token?</summary><p>No. It can identify that a required environment variable is absent, but authentication remains with the relevant provider.</p></details>
             <details><summary>Can every problem be repaired automatically?</summary><p>No. Safe repair is reserved for deterministic configuration transformations. Remote outages, permissions, enterprise policies, credentials, and server bugs require manual action.</p></details>
-            <details><summary>Why did a repair get skipped?</summary><p>The configuration may have changed after scanning. MCPulse uses a content hash to avoid overwriting newer user or application changes.</p></details>
+            <details><summary>Why did a repair get skipped?</summary><p>The configuration may have changed after scanning. MCPMender uses a content hash to avoid overwriting newer user or application changes.</p></details>
             <details><summary>Can I use the CLI and Desktop together?</summary><p>Yes. They use the same core scan and repair model. Re-scan after changes made by either interface.</p></details>
-            <details><summary>Does MCPulse run in the background?</summary><p>No background service is required for normal use. The program runs when opened or invoked.</p></details>
+            <details><summary>Does MCPMender run in the background?</summary><p>No background service is required for normal use. The program runs when opened or invoked.</p></details>
+            <details><summary>Why does the operating system warn about the app signature?</summary><p>Beta Windows builds may be self-signed, and beta macOS builds may use ad-hoc signing. Neither establishes a publisher identity trusted automatically by the operating system. Compare the published SHA-256 checksum and proceed only if you trust the release source.</p></details>
             <details><summary>Can I print this handbook?</summary><p>Yes. Switch to the desired language and use your browser’s Print or Save as PDF command.</p></details>`
           },
           {
@@ -440,7 +441,7 @@ mcpulse repair --apply-safe</pre>
               <li>Review a repair preview even when it is marked safe.</li>
               <li>Keep backups until the repaired server has worked in a real session.</li>
               <li>Test one failing server at a time so the diagnosis stays bounded.</li>
-              <li>Update MCPulse before filing a compatibility report.</li>
+              <li>Update MCPMender before filing a compatibility report.</li>
             </ul>`
           },
           {
@@ -457,33 +458,33 @@ mcpulse repair --apply-safe</pre>
             </tbody></table>`
           }
         ],
-        footer: "MCPulse Offline Handbook · Pre-release documentation. Features may change before v1.0."
+        footer: "MCPMender Offline Handbook · Pre-release documentation. Features may change before v1.0."
       },
       "zh-CN": {
-        edition: "离线使用手册 · v0.2",
+        edition: "离线使用手册 · 0.3.0-beta.1",
         printLabel: "打印 / 保存为 PDF",
-        sideNote: "本手册随 MCPulse 一起提供，可完全离线使用。使用浏览器的“打印”功能，可以把当前语言保存为 PDF。",
+        sideNote: "本手册随 MCPMender 一起提供，可完全离线使用。使用浏览器的“打印”功能，可以把当前语言保存为 PDF。",
         hero: {
           eyebrow: "放心开始使用",
           title: "看懂、检测并安全修复 MCP 连接",
-          text: "MCPulse 帮助 Codex、Claude、Cursor、VS Code、Gemini CLI 和 OpenCode 连接本地或远程 MCP 工具。本手册不要求你提前了解 MCP，会从第一次打开软件开始讲清楚所有重要操作。",
+          text: "MCPMender 帮助 Codex、Claude、Cursor、VS Code、Gemini CLI 和 OpenCode 连接本地或远程 MCP 工具。本手册不要求你提前了解 MCP，会从第一次打开软件开始讲清楚所有重要操作。",
           pills: ["Windows · macOS · Linux", "命令行 + Desktop", "完全本地", "中文 · English · 日本語"]
         },
         sections: [
           {
-            id: "understand", title: "1. MCPulse 是做什么的", lead: "可以把 MCP 理解成让 AI 开发工具连接 GitHub、浏览器、数据库和本地程序的“插头”。MCPulse 就是这个插头的连接诊断与修复工具。",
+            id: "understand", title: "1. 协议修匠 MCPMender 是做什么的", lead: "可以把 MCP 理解成让 AI 开发工具连接 GitHub、浏览器、数据库和本地程序的“插头”。协议修匠 MCPMender 就是这个插头的连接诊断与修复工具。",
             html: `<div class="cards">
               <div class="card"><strong>自动发现</strong><p>寻找 AI 工具的本地配置，不会因为没找到而擅自创建或修改。</p></div>
               <div class="card"><strong>通俗诊断</strong><p>用容易理解的语言说明路径、命令、环境变量、语法和连接问题。</p></div>
               <div class="card"><strong>安全修复</strong><p>先展示确定性的低风险修改，再备份原文件、执行并验证。</p></div>
               <div class="card"><strong>提供证据</strong><p>导出自动脱敏的报告，方便向维护者或技术支持求助。</p></div>
             </div>
-            <div class="callout"><strong>MCPulse 不是什么</strong><p>它不是新的 AI 聊天客户端，不是 MCP 应用商店，也不是后台云服务。只有在用户打开或执行命令时才会本地运行。</p></div>`
+            <div class="callout"><strong>MCPMender 不是什么</strong><p>它不是新的 AI 聊天客户端，不是 MCP 应用商店，也不是后台云服务。只有在用户打开或执行命令时才会本地运行。</p></div>`
           },
           {
             id: "quick-start", title: "2. 五分钟快速上手", lead: "Desktop 最适合普通用户；命令行提供相同核心能力，适合开发者和自动化环境。",
             html: `<h3>Desktop 图形界面</h3><ol class="steps">
-              <li>下载适合自己操作系统的安装包或便携版，然后打开 MCPulse。</li>
+              <li>下载适合自己操作系统的安装包或便携版，然后打开 MCPMender。</li>
               <li>在右上角选择语言。软件会记住你的选择。</li>
               <li>需要检测 VS Code 项目级配置时，先选择项目文件夹。</li>
               <li>点击<strong>立即检测</strong>。默认检测只读取，不修改任何配置。</li>
@@ -491,12 +492,12 @@ mcpulse repair --apply-safe</pre>
               <li>需要确认服务能否真正启动并使用 MCP 协议时，点击<strong>深度连接检测</strong>，检查命令列表后确认。</li>
               <li>如果存在可安全修复的问题，先查看修改前后内容，确认无误后再执行。</li>
             </ol>
-            <h3>命令行</h3><pre>mcpulse scan
-mcpulse scan --lang zh-CN
-mcpulse scan --lang ja
-mcpulse scan --json
-mcpulse probe
-mcpulse probe --run</pre>`
+            <h3>命令行</h3><p>先安装 Node.js 20 或更高版本，然后执行 <code>npm install --global mcpmender@beta</code>。</p><pre>mcpmender scan
+mcpmender scan --lang zh-CN
+mcpmender scan --lang ja
+mcpmender scan --json
+mcpmender probe
+mcpmender probe --run</pre>`
           },
           {
             id: "desktop", title: "3. Desktop 界面说明", lead: "即使不习惯命令行，也可以通过仪表盘完成检测、查看结果和安全修复。",
@@ -508,7 +509,7 @@ mcpulse probe --run</pre>`
               <tr><td>深度连接检测</td><td>确认后临时启动本地服务或连接远程地址，执行真实 MCP 握手，在支持时读取工具列表，完成后关闭连接。</td></tr>
               <tr><td>一键修复安全问题</td><td>先打开修改预览，不会点击后立即写入。</td></tr>
               <tr><td>导出脱敏报告</td><td>生成结构化 JSON，并隐藏用户主目录和常见 Token。</td></tr>
-              <tr><td>教程与帮助</td><td>在独立的 MCPulse 窗口中打开这份离线手册。</td></tr>
+              <tr><td>教程与帮助</td><td>在独立的 MCPMender 窗口中打开这份离线手册。</td></tr>
             </tbody></table>`
           },
           {
@@ -524,40 +525,40 @@ mcpulse probe --run</pre>`
           {
             id: "repair", title: "5. 一键修复、备份与撤销", lead: "一键修复只用于结果明确、能够验证的低风险配置修改。",
             html: `<ol class="steps">
-              <li>MCPulse 读取配置并记录内容哈希。</li>
+              <li>MCPMender 读取配置并记录内容哈希。</li>
               <li>用户先看到建议修改前后的完整命令。</li>
               <li>确认后再次检查文件是否在检测后被其他程序修改。</li>
               <li>把原文件复制到本地事务备份目录。</li>
               <li>应用修改并重新验证配置语法。</li>
               <li>如果验证失败，恢复原配置。</li>
             </ol>
-            <h3>命令行修复</h3><pre>mcpulse repair --plan
-mcpulse repair --apply-safe</pre>
+            <h3>命令行修复</h3><pre>mcpmender repair
+mcpmender repair --apply-safe</pre>
             <div class="callout warning"><strong>“一键”不等于“盲目信任”</strong><p>账号凭据、企业策略、防火墙、远程服务宕机和未知服务行为需要用户或管理员作出决定，不应该自动修改。</p></div>`
           },
           {
             id: "cli", title: "6. 命令行使用说明", lead: "命令行适合开发电脑、远程系统、自动化检查和技术支持场景。",
             html: `<table><thead><tr><th>命令</th><th>结果</th></tr></thead><tbody>
-              <tr><td><code>mcpulse scan</code></td><td>输出适合阅读的本地检测结果。</td></tr>
-              <tr><td><code>mcpulse scan --json</code></td><td>输出机器可读的脱敏报告。</td></tr>
-              <tr><td><code>mcpulse scan --lang en</code></td><td>使用英文输出。</td></tr>
-              <tr><td><code>mcpulse scan --lang zh-CN</code></td><td>使用简体中文输出。</td></tr>
-              <tr><td><code>mcpulse scan --lang ja</code></td><td>使用日语输出。</td></tr>
-              <tr><td><code>mcpulse probe</code></td><td>预览深度检测将使用的命令和远程地址，不会启动服务。</td></tr>
-              <tr><td><code>mcpulse probe --run</code></td><td>执行真实 MCP 初始化握手，默认超时 8 秒，并保证清理连接。</td></tr>
-              <tr><td><code>mcpulse probe --run --server 名称</code></td><td>只深度检测指定服务。</td></tr>
-              <tr><td><code>mcpulse repair --plan</code></td><td>只显示安全修复方案，不写入配置。</td></tr>
-              <tr><td><code>mcpulse repair --apply-safe</code></td><td>备份并应用符合条件的安全修复。</td></tr>
+              <tr><td><code>mcpmender scan</code></td><td>输出适合阅读的本地检测结果。</td></tr>
+              <tr><td><code>mcpmender scan --json</code></td><td>输出机器可读的脱敏报告。</td></tr>
+              <tr><td><code>mcpmender scan --lang en</code></td><td>使用英文输出。</td></tr>
+              <tr><td><code>mcpmender scan --lang zh-CN</code></td><td>使用简体中文输出。</td></tr>
+              <tr><td><code>mcpmender scan --lang ja</code></td><td>使用日语输出。</td></tr>
+              <tr><td><code>mcpmender probe</code></td><td>预览深度检测将使用的命令和远程地址，不会启动服务。</td></tr>
+              <tr><td><code>mcpmender probe --run</code></td><td>执行真实 MCP 初始化握手，默认超时 8 秒，并保证清理连接。</td></tr>
+              <tr><td><code>mcpmender probe --run --server 名称</code></td><td>只深度检测指定服务。</td></tr>
+              <tr><td><code>mcpmender repair</code></td><td>只显示安全修复方案，不写入配置。</td></tr>
+              <tr><td><code>mcpmender repair --apply-safe</code></td><td>备份并应用符合条件的安全修复。</td></tr>
             </tbody></table>`
           },
           {
-            id: "privacy", title: "7. 隐私与安全", lead: "MCP 配置可能包含敏感路径和凭据，因此 MCPulse 尽量减少不必要的数据暴露。",
+            id: "privacy", title: "7. 隐私与安全", lead: "MCP 配置可能包含敏感路径和凭据，因此 MCPMender 尽量减少不必要的数据暴露。",
             html: `<ul>
-              <li>不需要账号，不包含遥测，也不依赖 MCPulse 云服务。</li>
+              <li>不需要账号，不包含遥测，也不依赖 MCPMender 云服务。</li>
               <li>默认检测只在本地读取已知配置位置。</li>
               <li>导出报告会隐藏用户主目录和常见 Token 形式。</li>
               <li>备份保存在本地，但它仍可能包含原配置中的秘密，应像保护原配置一样保护备份。</li>
-              <li>MCPulse 不会因为发现一个 MCP 就宣称它安全可信。</li>
+              <li>MCPMender 不会因为发现一个 MCP 就宣称它安全可信。</li>
               <li>深度连接检测会先显示预览并要求确认，因为配置命令可能执行第三方代码，<code>npx</code> 也可能下载软件包。</li>
               <li>每次深度检测都有超时限制，完成后会关闭子进程或 HTTP 连接。</li>
             </ul>
@@ -566,9 +567,9 @@ mcpulse repair --apply-safe</pre>
           {
             id: "platforms", title: "8. Windows、macOS、Linux 与 WSL", lead: "核心原理相同，但不同系统的进程启动和配置路径存在差异。",
             html: `<table><thead><tr><th>平台</th><th>常见问题</th></tr></thead><tbody>
-              <tr><td>Windows</td><td>直接运行便携版 <code>.exe</code>，无需安装。<code>npx.cmd</code> 等命令可能需要 <code>cmd /c</code>，带空格路径和引号规则很重要。</td></tr>
-              <tr><td>macOS</td><td>按电脑选择 Apple 芯片版或 Intel 版，打开 DMG 后把 MCPulse 移入“应用程序”。未签名的开发包可能需要在“隐私与安全性”中明确允许。</td></tr>
-              <tr><td>Linux</td><td>对 AppImage 执行 <code>chmod +x</code> 后运行；也可解压 tar.gz 并运行 <code>mcpulse</code>。不同发行版缺失的动态库可能不同。</td></tr>
+              <tr><td>Windows</td><td>解压发布包后直接运行便携版 <code>.exe</code>，无需安装。Beta 的自签名证书不会自动获得 Windows 或 SmartScreen 信任；遇到提示时应先核对发布页的 SHA-256。<code>npx.cmd</code> 等命令可能需要 <code>cmd /c</code>，带空格路径和引号规则也很重要。</td></tr>
+              <tr><td>macOS</td><td>按电脑选择 Apple 芯片版或 Intel 版，打开 DMG 后把 MCPMender 移入“应用程序”。Beta 的 ad-hoc（临时）签名不能证明开发者身份，也不受 Gatekeeper 信任；核对 SHA-256 后，仍可能需要在“隐私与安全性”中明确允许。</td></tr>
+              <tr><td>Linux</td><td>对 AppImage 执行 <code>chmod +x</code> 后运行；也可解压 tar.gz 并运行 <code>mcpmender</code>。不同发行版缺失的动态库可能不同。</td></tr>
               <tr><td>WSL</td><td>不要让 Windows 程序直接使用 Linux 路径，也不要让 Linux 程序使用未转换的 Windows 路径。</td></tr>
             </tbody></table>
             <div class="callout"><strong>所有平台都可使用命令行</strong><p>安装 CLI 包需要 Node.js 20 或更高版本。Desktop 和 CLI 平时都不需要常驻后台。正式发布包会在对应操作系统上执行冒烟验证；打开下载文件前，请核对发布页给出的校验值。</p></div>`
@@ -576,7 +577,7 @@ mcpulse repair --apply-safe</pre>
           {
             id: "reports", title: "9. 导出报告与寻求帮助", lead: "一份有用的报告应该说明检查内容、失败位置和修改情况，同时避免泄露秘密。",
             html: `<h3>建议提供</h3><ul>
-              <li>MCPulse 版本、操作系统和受影响客户端。</li>
+              <li>MCPMender 版本、操作系统和受影响客户端。</li>
               <li>导出的脱敏 JSON 报告。</li>
               <li>用户看到的完整错误，以及同一服务能否在其他客户端正常工作。</li>
               <li>问题是否出现在客户端、运行环境或 MCP 服务升级之后。</li>
@@ -590,12 +591,13 @@ mcpulse repair --apply-safe</pre>
             id: "faq", title: "10. 常见问题", lead: "这里集中回答用户刚开始使用时最常遇到的问题。",
             html: `<details open><summary>点击“立即检测”会修改文件吗？</summary><p>不会。检测是只读操作。只有用户打开修复预览并明确确认符合条件的修复后，配置才会改变。</p></details>
             <details><summary>为什么“立即检测”不能证明服务真的可用？</summary><p>立即检测不会运行第三方代码，它只检查文件、语法、命令、环境变量引用和 URL。需要真正启动或连接服务并执行 MCP 握手时，请使用“深度连接检测”。</p></details>
-            <details><summary>为什么某个客户端显示“尚未配置”？</summary><p>MCPulse 没有在已知位置找到受支持的配置文件。如果客户端未安装或从未配置 MCP，这是正常情况。</p></details>
-            <details><summary>MCPulse 能替我创建或找回 Token 吗？</summary><p>不能。它可以提示缺少必要环境变量，但账号授权必须通过对应服务商完成。</p></details>
+            <details><summary>为什么某个客户端显示“尚未配置”？</summary><p>MCPMender 没有在已知位置找到受支持的配置文件。如果客户端未安装或从未配置 MCP，这是正常情况。</p></details>
+            <details><summary>MCPMender 能替我创建或找回 Token 吗？</summary><p>不能。它可以提示缺少必要环境变量，但账号授权必须通过对应服务商完成。</p></details>
             <details><summary>所有问题都能自动修复吗？</summary><p>不能。安全修复仅限于确定性的配置转换。远程故障、权限、企业策略、账号凭据和服务程序缺陷需要人工处理。</p></details>
-            <details><summary>为什么修复被跳过了？</summary><p>配置可能在检测后发生了变化。MCPulse 使用内容哈希防止覆盖用户或其他程序的新修改。</p></details>
+            <details><summary>为什么修复被跳过了？</summary><p>配置可能在检测后发生了变化。MCPMender 使用内容哈希防止覆盖用户或其他程序的新修改。</p></details>
             <details><summary>命令行和 Desktop 可以同时使用吗？</summary><p>可以。它们使用同一个核心检测和修复模型。任何一边修改后，都建议重新检测。</p></details>
-            <details><summary>MCPulse 会一直在后台运行吗？</summary><p>正常使用不需要后台服务。只有用户打开软件或执行命令时才会运行。</p></details>
+            <details><summary>MCPMender 会一直在后台运行吗？</summary><p>正常使用不需要后台服务。只有用户打开软件或执行命令时才会运行。</p></details>
+            <details><summary>为什么系统提示软件签名不受信任？</summary><p>Beta Windows 包可能使用自签名证书，macOS 包可能使用 ad-hoc（临时）签名；两者都不能建立受操作系统自动信任的发布者身份。请先核对发布页的 SHA-256，并且只在信任发布来源时继续。</p></details>
             <details><summary>这份手册可以保存成 PDF 吗？</summary><p>可以。切换到需要的语言后，使用浏览器的“打印”或“另存为 PDF”。</p></details>`
           },
           {
@@ -606,7 +608,7 @@ mcpulse repair --apply-safe</pre>
               <li>即使标记为安全修复，也要先查看修改预览。</li>
               <li>在修复后的 MCP 真正完成一次工作前保留备份。</li>
               <li>每次只检查一个失败服务，让问题范围保持清晰。</li>
-              <li>提交兼容性问题之前先升级 MCPulse。</li>
+              <li>提交兼容性问题之前先升级 MCPMender。</li>
             </ul>`
           },
           {
@@ -623,33 +625,33 @@ mcpulse repair --apply-safe</pre>
             </tbody></table>`
           }
         ],
-        footer: "MCPulse 离线使用手册 · 当前为预发布文档，v1.0 前功能可能调整。"
+        footer: "MCPMender 离线使用手册 · 当前为预发布文档，v1.0 前功能可能调整。"
       },
       ja: {
-        edition: "オフラインハンドブック · v0.2",
+        edition: "オフラインハンドブック · 0.3.0-beta.1",
         printLabel: "印刷 / PDF に保存",
-        sideNote: "このハンドブックは MCPulse に同梱され、完全にオフラインで利用できます。ブラウザーの印刷機能で、現在の言語を PDF として保存できます。",
+        sideNote: "このハンドブックは MCPMender に同梱され、完全にオフラインで利用できます。ブラウザーの印刷機能で、現在の言語を PDF として保存できます。",
         hero: {
           eyebrow: "安心して使い始める",
           title: "MCP 接続を理解・診断し、安全に修復する",
-          text: "MCPulse は Codex、Claude、Cursor、VS Code、Gemini CLI、OpenCode とローカル／リモート MCP ツールの接続を支援します。MCP の事前知識がなくても、重要な操作を理解できるように説明します。",
+          text: "MCPMender は Codex、Claude、Cursor、VS Code、Gemini CLI、OpenCode とローカル／リモート MCP ツールの接続を支援します。MCP の事前知識がなくても、重要な操作を理解できるように説明します。",
           pills: ["Windows · macOS · Linux", "CLI + Desktop", "ローカル処理", "日本語 · 中文 · English"]
         },
         sections: [
           {
-            id: "understand", title: "1. MCPulse の役割", lead: "MCP は、AI 開発ツールを GitHub、ブラウザー、データベース、ローカルツールにつなぐ「プラグ」のようなものです。MCPulse はその接続ドクターです。",
+            id: "understand", title: "1. MCPMender の役割", lead: "MCP は、AI 開発ツールを GitHub、ブラウザー、データベース、ローカルツールにつなぐ「プラグ」のようなものです。MCPMender はその接続ドクターです。",
             html: `<div class="cards">
               <div class="card"><strong>検出</strong><p>AI ツールの設定を探します。見つからなくても勝手に作成・変更しません。</p></div>
               <div class="card"><strong>診断</strong><p>パス、コマンド、環境変数、構文、接続の問題を分かりやすく説明します。</p></div>
               <div class="card"><strong>安全な修復</strong><p>決定的で低リスクの変更をプレビューし、バックアップ後に適用・検証します。</p></div>
               <div class="card"><strong>証拠の共有</strong><p>一般的な秘密情報を匿名化したレポートを出力します。</p></div>
             </div>
-            <div class="callout"><strong>MCPulse ではないもの</strong><p>AI チャットクライアント、MCP マーケットプレイス、バックグラウンドのクラウドサービスではありません。ユーザーが起動したときだけローカルで動作します。</p></div>`
+            <div class="callout"><strong>MCPMender ではないもの</strong><p>AI チャットクライアント、MCP マーケットプレイス、バックグラウンドのクラウドサービスではありません。ユーザーが起動したときだけローカルで動作します。</p></div>`
           },
           {
             id: "quick-start", title: "2. 5 分クイックスタート", lead: "Desktop は最も簡単な方法です。CLI はターミナルや自動化で同じコア機能を提供します。",
             html: `<h3>Desktop</h3><ol class="steps">
-              <li>OS に合ったパッケージをダウンロードして MCPulse を開きます。</li>
+              <li>OS に合ったパッケージをダウンロードして MCPMender を開きます。</li>
               <li>右上で言語を選びます。選択内容は保存されます。</li>
               <li>VS Code のプロジェクト設定も診断する場合は、プロジェクトフォルダーを選択します。</li>
               <li><strong>今すぐ診断</strong>を選びます。既定の診断は読み取り専用です。</li>
@@ -657,12 +659,12 @@ mcpulse repair --apply-safe</pre>
               <li>サーバーの起動と MCP 通信を確認する場合は、<strong>詳細接続診断</strong>を選び、コマンド一覧を確認して実行します。</li>
               <li>安全な修復がある場合、変更前後を確認してから実行します。</li>
             </ol>
-            <h3>CLI</h3><pre>mcpulse scan
-mcpulse scan --lang zh-CN
-mcpulse scan --lang ja
-mcpulse scan --json
-mcpulse probe
-mcpulse probe --run</pre>`
+            <h3>CLI</h3><p>Node.js 20 以降をインストールし、<code>npm install --global mcpmender@beta</code> を実行します。</p><pre>mcpmender scan
+mcpmender scan --lang zh-CN
+mcpmender scan --lang ja
+mcpmender scan --json
+mcpmender probe
+mcpmender probe --run</pre>`
           },
           {
             id: "desktop", title: "3. Desktop 画面", lead: "ターミナルを使わない方でも、ダッシュボードから診断と安全な修復を行えます。",
@@ -674,7 +676,7 @@ mcpulse probe --run</pre>`
               <tr><td>詳細接続診断</td><td>確認後、ローカルサーバーの一時起動またはリモート接続を行い、実際の MCP ハンドシェイクとツール一覧を確認して接続を閉じます。</td></tr>
               <tr><td>安全な問題を一括修復</td><td>書き込む前に変更プレビューを開きます。</td></tr>
               <tr><td>匿名化レポート</td><td>ホームパスや一般的な Token を隠した JSON を作成します。</td></tr>
-              <tr><td>チュートリアルとヘルプ</td><td>このオフラインハンドブックを MCPulse の別ウィンドウで開きます。</td></tr>
+              <tr><td>チュートリアルとヘルプ</td><td>このオフラインハンドブックを MCPMender の別ウィンドウで開きます。</td></tr>
             </tbody></table>`
           },
           {
@@ -690,36 +692,36 @@ mcpulse probe --run</pre>`
           {
             id: "repair", title: "5. ワンクリック修復・バックアップ・ロールバック", lead: "ワンクリック修復は、結果が明確で検証可能な低リスク変更だけに限定されます。",
             html: `<ol class="steps">
-              <li>MCPulse が設定を読み、内容のハッシュを記録します。</li>
+              <li>MCPMender が設定を読み、内容のハッシュを記録します。</li>
               <li>変更前と変更後のコマンドを確認します。</li>
               <li>確認後、診断以降にファイルが変更されていないか再確認します。</li>
               <li>元の設定をローカルのトランザクションバックアップへコピーします。</li>
               <li>変更を適用し、構文を再検証します。</li>
               <li>検証に失敗した場合は元の設定を復元します。</li>
             </ol>
-            <h3>CLI 修復コマンド</h3><pre>mcpulse repair --plan
-mcpulse repair --apply-safe</pre>
+            <h3>CLI 修復コマンド</h3><pre>mcpmender repair
+mcpmender repair --apply-safe</pre>
             <div class="callout warning"><strong>「ワンクリック」は「盲目的な信頼」ではありません</strong><p>資格情報、企業ポリシー、ファイアウォール、リモート障害、不明なサーバー動作はユーザーまたは管理者の判断が必要です。</p></div>`
           },
           {
             id: "cli", title: "6. コマンドラインリファレンス", lead: "CLI は開発 PC、リモート環境、自動化、サポート作業に適しています。",
             html: `<table><thead><tr><th>コマンド</th><th>結果</th></tr></thead><tbody>
-              <tr><td><code>mcpulse scan</code></td><td>読みやすいローカル診断。</td></tr>
-              <tr><td><code>mcpulse scan --json</code></td><td>機械可読の匿名化レポート。</td></tr>
-              <tr><td><code>mcpulse scan --lang en</code></td><td>英語で出力。</td></tr>
-              <tr><td><code>mcpulse scan --lang zh-CN</code></td><td>簡体字中国語で出力。</td></tr>
-              <tr><td><code>mcpulse scan --lang ja</code></td><td>日本語で出力。</td></tr>
-              <tr><td><code>mcpulse probe</code></td><td>詳細診断で使うコマンドと接続先を表示します。サーバーは起動しません。</td></tr>
-              <tr><td><code>mcpulse probe --run</code></td><td>実際の MCP 初期化ハンドシェイクを行い、既定 8 秒でタイムアウトして接続を確実に閉じます。</td></tr>
-              <tr><td><code>mcpulse probe --run --server 名前</code></td><td>指定サーバーだけを詳細診断します。</td></tr>
-              <tr><td><code>mcpulse repair --plan</code></td><td>書き込まずに修復案を表示。</td></tr>
-              <tr><td><code>mcpulse repair --apply-safe</code></td><td>バックアップ後、安全な修復を適用。</td></tr>
+              <tr><td><code>mcpmender scan</code></td><td>読みやすいローカル診断。</td></tr>
+              <tr><td><code>mcpmender scan --json</code></td><td>機械可読の匿名化レポート。</td></tr>
+              <tr><td><code>mcpmender scan --lang en</code></td><td>英語で出力。</td></tr>
+              <tr><td><code>mcpmender scan --lang zh-CN</code></td><td>簡体字中国語で出力。</td></tr>
+              <tr><td><code>mcpmender scan --lang ja</code></td><td>日本語で出力。</td></tr>
+              <tr><td><code>mcpmender probe</code></td><td>詳細診断で使うコマンドと接続先を表示します。サーバーは起動しません。</td></tr>
+              <tr><td><code>mcpmender probe --run</code></td><td>実際の MCP 初期化ハンドシェイクを行い、既定 8 秒でタイムアウトして接続を確実に閉じます。</td></tr>
+              <tr><td><code>mcpmender probe --run --server 名前</code></td><td>指定サーバーだけを詳細診断します。</td></tr>
+              <tr><td><code>mcpmender repair</code></td><td>書き込まずに修復案を表示。</td></tr>
+              <tr><td><code>mcpmender repair --apply-safe</code></td><td>バックアップ後、安全な修復を適用。</td></tr>
             </tbody></table>`
           },
           {
-            id: "privacy", title: "7. プライバシーとセキュリティ", lead: "MCP 設定には機密パスや資格情報が含まれる場合があります。MCPulse は不要な露出を最小限にします。",
+            id: "privacy", title: "7. プライバシーとセキュリティ", lead: "MCP 設定には機密パスや資格情報が含まれる場合があります。MCPMender は不要な露出を最小限にします。",
             html: `<ul>
-              <li>アカウント、テレメトリ、MCPulse クラウドは不要です。</li>
+              <li>アカウント、テレメトリ、MCPMender クラウドは不要です。</li>
               <li>既定の診断は既知の設定場所をローカルで読み取ります。</li>
               <li>レポートはホームパスと一般的な Token 形式を置き換えます。</li>
               <li>バックアップはローカルですが元の秘密を含む場合があり、元設定と同様に保護が必要です。</li>
@@ -732,9 +734,9 @@ mcpulse repair --apply-safe</pre>
           {
             id: "platforms", title: "8. Windows・macOS・Linux・WSL", lead: "基本概念は共通ですが、プロセス起動と設定パスは OS ごとに異なります。",
             html: `<table><thead><tr><th>プラットフォーム</th><th>一般的な注意点</th></tr></thead><tbody>
-              <tr><td>Windows</td><td>ポータブル <code>.exe</code> を直接実行でき、インストールは不要です。<code>npx.cmd</code> では <code>cmd /c</code> が必要な場合があり、空白を含むパスにも注意します。</td></tr>
-              <tr><td>macOS</td><td>Apple Silicon 版または Intel 版を選び、DMG を開いて MCPulse をアプリケーションへ移動します。未署名の開発ビルドは「プライバシーとセキュリティ」で明示的な許可が必要な場合があります。</td></tr>
-              <tr><td>Linux</td><td>AppImage に <code>chmod +x</code> を実行して起動するか、tar.gz を展開して <code>mcpulse</code> を実行します。必要な共有ライブラリはディストリビューションごとに異なります。</td></tr>
+              <tr><td>Windows</td><td>アーカイブを展開し、ポータブル <code>.exe</code> を実行します。インストールは不要です。Beta の自己署名証明書は Windows や SmartScreen から自動的に信頼されません。警告を許可する前に公開 SHA-256 を確認してください。<code>npx.cmd</code> では <code>cmd /c</code> が必要な場合があり、空白を含むパスにも注意します。</td></tr>
+              <tr><td>macOS</td><td>Apple Silicon 版または Intel 版を選び、DMG を開いて MCPMender をアプリケーションへ移動します。Beta の ad-hoc 署名は開発者の身元を証明せず、Gatekeeper から信頼されません。SHA-256 を確認しても「プライバシーとセキュリティ」で明示的な許可が必要な場合があります。</td></tr>
+              <tr><td>Linux</td><td>AppImage に <code>chmod +x</code> を実行して起動するか、tar.gz を展開して <code>mcpmender</code> を実行します。必要な共有ライブラリはディストリビューションごとに異なります。</td></tr>
               <tr><td>WSL</td><td>Windows 実行ファイルと Linux パス、または Linux 実行ファイルと未変換 Windows パスを混在させないでください。</td></tr>
             </tbody></table>
             <div class="callout"><strong>CLI は全プラットフォームで利用可能</strong><p>CLI パッケージには Node.js 20 以降が必要です。Desktop と CLI は常駐サービスを必要としません。正式リリースは対象 OS でスモークテストされます。ダウンロードしたパッケージを開く前に、リリースページのチェックサムを確認してください。</p></div>`
@@ -742,7 +744,7 @@ mcpulse repair --apply-safe</pre>
           {
             id: "reports", title: "9. レポートとサポート依頼", lead: "良いレポートは、何を確認し、どこで失敗し、何が変わったかを秘密を漏らさず伝えます。",
             html: `<h3>含める情報</h3><ul>
-              <li>MCPulse バージョン、OS、影響を受けるクライアント。</li>
+              <li>MCPMender バージョン、OS、影響を受けるクライアント。</li>
               <li>匿名化 JSON レポート。</li>
               <li>表示された完全なエラーと、別クライアントでは動くかどうか。</li>
               <li>クライアント、ランタイム、サーバー更新後に始まったか。</li>
@@ -762,6 +764,7 @@ mcpulse repair --apply-safe</pre>
             <details><summary>なぜ修復がスキップされましたか？</summary><p>診断後に設定が変わった可能性があります。内容ハッシュで新しい変更の上書きを防ぎます。</p></details>
             <details><summary>CLI と Desktop を一緒に使えますか？</summary><p>はい。同じコアモデルを使います。どちらかで変更した後は再診断してください。</p></details>
             <details><summary>バックグラウンドで動作しますか？</summary><p>通常利用にバックグラウンドサービスは不要です。開くかコマンドを実行したときだけ動作します。</p></details>
+            <details><summary>アプリの署名について OS が警告するのはなぜですか？</summary><p>Beta の Windows ビルドは自己署名、macOS ビルドは ad-hoc 署名の場合があります。どちらも OS が自動的に信頼する発行者の身元を確立しません。公開 SHA-256 と一致することを確認し、配布元を信頼できる場合だけ続行してください。</p></details>
             <details><summary>このハンドブックを PDF にできますか？</summary><p>希望の言語に切り替え、ブラウザーの印刷または PDF 保存を使用してください。</p></details>`
           },
           {
@@ -772,7 +775,7 @@ mcpulse repair --apply-safe</pre>
               <li>安全と表示されても修復プレビューを確認します。</li>
               <li>実際のセッションで動くまでバックアップを保持します。</li>
               <li>失敗したサーバーを一つずつ確認し、診断範囲を限定します。</li>
-              <li>互換性問題を報告する前に MCPulse を更新します。</li>
+              <li>互換性問題を報告する前に MCPMender を更新します。</li>
             </ul>`
           },
           {
@@ -789,7 +792,7 @@ mcpulse repair --apply-safe</pre>
             </tbody></table>`
           }
         ],
-        footer: "MCPulse オフラインハンドブック · プレリリース版。v1.0 までに機能が変更される場合があります。"
+        footer: "MCPMender オフラインハンドブック · プレリリース版。v1.0 までに機能が変更される場合があります。"
       }
     };
 
@@ -810,7 +813,7 @@ mcpulse repair --apply-safe</pre>
     function render(locale) {
       const book = handbook[locale];
       document.documentElement.lang = locale;
-      document.title = `MCPulse — ${book.edition}`;
+      document.title = `MCPMender — ${book.edition}`;
       select.value = locale;
       edition.textContent = book.edition;
       sideNote.textContent = book.sideNote;
@@ -844,10 +847,10 @@ mcpulse repair --apply-safe</pre>
       document.querySelectorAll("main section").forEach(section => observer.observe(section));
     }
 
-    const initial = normalize(localStorage.getItem("mcpulse.handbook.locale") || navigator.language);
+    const initial = normalize(localStorage.getItem("mcpmender.handbook.locale") || navigator.language);
     select.addEventListener("change", () => {
       const locale = normalize(select.value);
-      localStorage.setItem("mcpulse.handbook.locale", locale);
+      localStorage.setItem("mcpmender.handbook.locale", locale);
       render(locale);
       window.scrollTo({ top: 0, behavior: "smooth" });
     });

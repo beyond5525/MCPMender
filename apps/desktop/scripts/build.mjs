@@ -38,5 +38,6 @@ await Promise.all([
   }),
   copyFile("src/index.html", "dist/index.html"),
   copyFile("src/styles.css", "dist/styles.css"),
-  copyFile("../../docs/MCPulse-Handbook.html", "dist/MCPulse-Handbook.html")
+  copyFile("assets/icons/icon.png", "dist/icon.png"),
+  copyFile("../../docs/MCPMender-Handbook.html", "dist/MCPMender-Handbook.html")
 ]);

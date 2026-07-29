@@ -1,23 +1,26 @@
 {
-  "name": "mcpulse",
-  "version": "0.2.0",
+  "name": "mcpmender-workspace",
+  "version": "0.3.0-beta.1",
   "private": true,
-  "description": "Local MCP diagnostics and safe repair for AI developer tools.",
+  "description": "MCPMender (协议修匠) — local MCP diagnostics and safe repair for AI developer tools.",
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.8.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "build": "pnpm -r build",
-    "typecheck": "pnpm --filter @mcpulse/core build && pnpm -r typecheck",
+    "typecheck": "pnpm --filter @mcpmender/core build && pnpm -r typecheck",
     "test": "pnpm -r test",
-    "cli": "pnpm --filter @mcpulse/cli dev",
-    "desktop": "pnpm --filter @mcpulse/desktop dev",
-    "desktop:dist": "pnpm --filter @mcpulse/desktop dist",
-    "desktop:dist:mac": "pnpm --filter @mcpulse/desktop dist:mac",
-    "desktop:dist:linux": "pnpm --filter @mcpulse/desktop dist:linux"
+    "cli": "pnpm --filter mcpmender dev",
+    "desktop": "pnpm --filter @mcpmender/desktop dev",
+    "desktop:dist": "pnpm --filter @mcpmender/desktop dist",
+    "desktop:dist:mac": "pnpm --filter @mcpmender/desktop dist:mac",
+    "desktop:dist:linux": "pnpm --filter @mcpmender/desktop dist:linux"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "typescript": "^5.8.3",
-    "vitest": "^3.2.4"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
   }
 }

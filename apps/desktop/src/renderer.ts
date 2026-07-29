@@ -1,17 +1,17 @@
 import {
   normalizeLocale,
   translate
-} from "@mcpulse/core/i18n";
+} from "@mcpmender/core/i18n";
 import type {
   ClientScanResult,
   Locale,
   ProbeReport,
   ProbeTarget,
   ScanReport
-} from "@mcpulse/core/types";
+} from "@mcpmender/core/types";
 
 let locale: Locale = normalizeLocale(
-  localStorage.getItem("mcpulse.locale") ?? navigator.language
+  localStorage.getItem("mcpmender.locale") ?? navigator.language
 );
 let report: ScanReport | undefined;
 let toastTimer: number | undefined;
@@ -243,7 +243,7 @@ async function runScan(announce = true): Promise<void> {
   updateScanStatus();
   try {
     const [nextReport] = await Promise.all([
-      window.mcpulse.scan(),
+      window.mcpmender.scan(),
       new Promise<void>((resolve) =>
         window.setTimeout(resolve, announce ? 650 : 0)
       )
@@ -296,7 +296,7 @@ function openRepairPreview(): void {
 async function openProbePreview(): Promise<void> {
   probeButton.disabled = true;
   try {
-    const targets = await window.mcpulse.planProbe();
+    const targets = await window.mcpmender.planProbe();
     if (targets.length === 0) {
       showToast(t("probe.none"));
       return;
@@ -328,7 +328,7 @@ async function runDeepProbe(): Promise<void> {
   probeButton.disabled = true;
   probeButton.textContent = t("action.deepChecking");
   try {
-    const nextReport = await window.mcpulse.runProbe();
+    const nextReport = await window.mcpmender.runProbe();
     renderProbeReport(nextReport);
     showToast(
       t("probe.complete", {
@@ -348,7 +348,7 @@ async function runDeepProbe(): Promise<void> {
 
 languageSelect.addEventListener("change", () => {
   locale = normalizeLocale(languageSelect.value);
-  localStorage.setItem("mcpulse.locale", locale);
+  localStorage.setItem("mcpmender.locale", locale);
   applyTranslations();
 });
 
@@ -357,14 +357,14 @@ probeButton.addEventListener("click", () => void openProbePreview());
 repairButton.addEventListener("click", openRepairPreview);
 exportButton.addEventListener("click", async () => {
   if (!report) return;
-  const result = await window.mcpulse.exportReport(report);
+  const result = await window.mcpmender.exportReport();
   if (result.saved) showToast(t("report.saved"));
 });
-helpButton.addEventListener("click", () => void window.mcpulse.openHelp());
+helpButton.addEventListener("click", () => void window.mcpmender.openHelp());
 workspaceButton.addEventListener("click", async () => {
   workspaceButton.disabled = true;
   try {
-    const result = await window.mcpulse.selectProject();
+    const result = await window.mcpmender.selectProject();
     if (result.path) {
       selectedProjectPath = result.path;
       workspacePath.textContent = result.path;
@@ -395,7 +395,9 @@ document.querySelector("#dialog-confirm")!.addEventListener("click", async () =>
   const button = document.querySelector<HTMLButtonElement>("#dialog-confirm")!;
   button.disabled = true;
   try {
-    const result = await window.mcpulse.repairSafe(report.repairs);
+    const result = await window.mcpmender.repairSafe(
+      report.repairs.map((repair) => repair.id)
+    );
     repairDialog.close();
     const applied = result.results.filter((item) => item.applied).length;
     showToast(applied > 0 ? t("repair.complete") : t("repair.failed"));

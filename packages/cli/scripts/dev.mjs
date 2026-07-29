@@ -4,7 +4,7 @@ import { build } from "esbuild";
 
 await build({
   entryPoints: ["src/index.ts"],
-  outfile: "dist/mcpulse-dev.cjs",
+  outfile: "dist/mcpmender-dev.cjs",
   bundle: true,
   platform: "node",
   format: "cjs",
@@ -14,7 +14,7 @@ await build({
 
 const child = spawn(
   process.execPath,
-  ["dist/mcpulse-dev.cjs", ...process.argv.slice(2)],
+  ["dist/mcpmender-dev.cjs", ...process.argv.slice(2)],
   { stdio: "inherit" }
 );
 child.on("exit", (code) => process.exit(code ?? 1));

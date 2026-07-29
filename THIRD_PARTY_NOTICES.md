@@ -1,7 +1,7 @@
 # Third-party notices
 
-MCPulse includes or builds with open-source software. The following list covers
-the direct dependencies used by the V0.2.0 source tree. Transitive dependency
+MCPMender includes or builds with open-source software. The following list covers
+the direct dependencies used by the V0.3.0-beta.1 source tree. Transitive dependency
 license texts remain available in their distributed packages and lockfile.
 
 | Component | Purpose | License | Project |
@@ -18,4 +18,4 @@ license texts remain available in their distributed packages and lockfile.
 | pnpm | Workspace package management | MIT | https://github.com/pnpm/pnpm |
 | Node.js | JavaScript runtime | MIT and additional component licenses | https://github.com/nodejs/node |
 
-MCPulse itself is licensed under Apache-2.0. See `LICENSE`.
+MCPMender itself is licensed under Apache-2.0. See `LICENSE`.

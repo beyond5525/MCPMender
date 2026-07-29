@@ -1,19 +1,29 @@
 import { writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { pathToFileURL } from "node:url";
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  type IpcMainInvokeEvent
+} from "electron";
 import {
   applySafeRepairs,
   planProbeTargets,
   probeMcpConfigurations,
   redactReport,
   scanMcpConfigurations,
-  type RepairAction
-} from "@mcpulse/core";
+  type ScanReport
+} from "@mcpmender/core";
 
 let mainWindow: BrowserWindow | undefined;
 let helpWindow: BrowserWindow | undefined;
 let selectedProjectDir: string | undefined;
+let lastScanReport: ScanReport | undefined;
+
+app.setName("MCPMender");
 
 function desktopScanOptions(): {
   projectDir?: string;
@@ -23,6 +33,25 @@ function desktopScanOptions(): {
     projectDir: selectedProjectDir,
     skipProjectConfigs: !selectedProjectDir
   };
+}
+
+async function performScan(): Promise<ScanReport> {
+  lastScanReport = await scanMcpConfigurations(desktopScanOptions());
+  return lastScanReport;
+}
+
+function assertTrustedRenderer(event: IpcMainInvokeEvent): void {
+  if (!mainWindow || event.sender !== mainWindow.webContents) {
+    throw new Error("Rejected IPC request from an untrusted renderer.");
+  }
+}
+
+function hardenWindow(window: BrowserWindow): void {
+  const allowedRoot = pathToFileURL(`${__dirname}${path.sep}`).href;
+  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  window.webContents.on("will-navigate", (event, url) => {
+    if (!url.startsWith(allowedRoot)) event.preventDefault();
+  });
 }
 
 function openHelpWindow(): void {
@@ -38,15 +67,19 @@ function openHelpWindow(): void {
     minHeight: 600,
     show: false,
     backgroundColor: "#08111e",
-    title: "MCPulse Tutorial & Help",
+    title: "MCPMender Tutorial & Help",
+    icon: path.join(__dirname, "icon.png"),
     webPreferences: {
       contextIsolation: true,
       sandbox: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      devTools: !app.isPackaged,
+      webSecurity: true
     }
   });
+  hardenWindow(helpWindow);
   helpWindow.setMenuBarVisibility(false);
-  void helpWindow.loadFile(path.join(__dirname, "MCPulse-Handbook.html"));
+  void helpWindow.loadFile(path.join(__dirname, "MCPMender-Handbook.html"));
   helpWindow.once("ready-to-show", () => helpWindow?.show());
   helpWindow.on("closed", () => {
     helpWindow = undefined;
@@ -61,6 +94,7 @@ function createWindow(): void {
     minHeight: 620,
     show: false,
     backgroundColor: "#09111f",
+    icon: path.join(__dirname, "icon.png"),
     titleBarStyle: "hidden",
     titleBarOverlay: {
       color: "#09111f",
@@ -71,18 +105,21 @@ function createWindow(): void {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       sandbox: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      devTools: !app.isPackaged,
+      webSecurity: true
     }
   });
+  hardenWindow(mainWindow);
 
   const initialPage =
-    process.env.MCPULSE_CAPTURE_TARGET === "help"
-      ? "MCPulse-Handbook.html"
+    process.env.MCPMENDER_CAPTURE_TARGET === "help"
+      ? "MCPMender-Handbook.html"
       : "index.html";
   void mainWindow.loadFile(path.join(__dirname, initialPage));
   mainWindow.once("ready-to-show", () => {
     mainWindow?.show();
-    const capturePath = process.env.MCPULSE_CAPTURE_PATH;
+    const capturePath = process.env.MCPMENDER_CAPTURE_PATH;
     if (capturePath) {
       setTimeout(async () => {
         const image = await mainWindow?.webContents.capturePage();
@@ -94,10 +131,12 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  ipcMain.handle("mcpulse:scan", () =>
-    scanMcpConfigurations(desktopScanOptions())
-  );
-  ipcMain.handle("mcpulse:select-project", async () => {
+  ipcMain.handle("mcpmender:scan", (event) => {
+    assertTrustedRenderer(event);
+    return performScan();
+  });
+  ipcMain.handle("mcpmender:select-project", async (event) => {
+    assertTrustedRenderer(event);
     const result = await dialog.showOpenDialog({
       title: "Select a project folder",
       properties: ["openDirectory"]
@@ -108,27 +147,48 @@ app.whenReady().then(() => {
     selectedProjectDir = result.filePaths[0];
     return {
       path: selectedProjectDir,
-      report: await scanMcpConfigurations(desktopScanOptions())
+      report: await performScan()
     };
   });
-  ipcMain.handle("mcpulse:probe-plan", () =>
-    planProbeTargets(desktopScanOptions())
-  );
-  ipcMain.handle("mcpulse:probe-run", () =>
-    probeMcpConfigurations({
+  ipcMain.handle("mcpmender:probe-plan", (event) => {
+    assertTrustedRenderer(event);
+    return planProbeTargets(desktopScanOptions());
+  });
+  ipcMain.handle("mcpmender:probe-run", (event) => {
+    assertTrustedRenderer(event);
+    return probeMcpConfigurations({
       timeoutMs: 8_000,
       concurrency: 2,
       scanOptions: desktopScanOptions()
-    })
-  );
+    });
+  });
   ipcMain.handle(
-    "mcpulse:repair-safe",
-    (_event, repairs: RepairAction[]) => applySafeRepairs(repairs)
+    "mcpmender:repair-safe",
+    async (event, repairIds: unknown) => {
+      assertTrustedRenderer(event);
+      if (
+        !Array.isArray(repairIds) ||
+        repairIds.length > 256 ||
+        repairIds.some((id) => typeof id !== "string")
+      ) {
+        throw new Error("Invalid repair selection.");
+      }
+      const selected = new Set(repairIds);
+      const repairs = (lastScanReport?.repairs ?? []).filter((repair) =>
+        selected.has(repair.id)
+      );
+      if (repairs.length !== selected.size) {
+        throw new Error("Repair selection is stale or unknown.");
+      }
+      return applySafeRepairs(repairs);
+    }
   );
-  ipcMain.handle("mcpulse:export-report", async (_event, report) => {
+  ipcMain.handle("mcpmender:export-report", async (event) => {
+    assertTrustedRenderer(event);
+    const report = lastScanReport ?? (await performScan());
     const result = await dialog.showSaveDialog({
-      title: "Export MCPulse report",
-      defaultPath: `mcpulse-report-${new Date()
+      title: "Export MCPMender report",
+      defaultPath: `mcpmender-report-${new Date()
         .toISOString()
         .slice(0, 10)}.json`,
       filters: [{ name: "JSON", extensions: ["json"] }]
@@ -141,7 +201,10 @@ app.whenReady().then(() => {
     );
     return { saved: true, path: result.filePath };
   });
-  ipcMain.handle("mcpulse:open-help", () => openHelpWindow());
+  ipcMain.handle("mcpmender:open-help", (event) => {
+    assertTrustedRenderer(event);
+    openHelpWindow();
+  });
   createWindow();
 });
 

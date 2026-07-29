@@ -1,9 +1,24 @@
 {
-  "name": "@mcpulse/cli",
-  "version": "0.2.0",
+  "name": "mcpmender",
+  "version": "0.3.0-beta.1",
   "type": "module",
-  "description": "Cross-platform MCP configuration diagnostics, live handshake checks, and safe repair.",
+  "description": "MCPMender (协议修匠): cross-platform MCP configuration diagnostics, live handshake checks, and safe repair.",
+  "author": "MCPMender contributors",
   "license": "Apache-2.0",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "diagnostics",
+    "repair",
+    "codex",
+    "claude",
+    "cursor"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "tag": "beta"
+  },
   "files": [
     "dist",
     "README.md"
@@ -12,7 +27,7 @@
     "node": ">=20"
   },
   "bin": {
-    "mcpulse": "dist/mcpulse.cjs"
+    "mcpmender": "dist/mcpmender.cjs"
   },
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -21,7 +36,7 @@
     "dev": "node scripts/dev.mjs"
   },
   "devDependencies": {
-    "@mcpulse/core": "workspace:*",
-    "esbuild": "^0.25.5"
+    "@mcpmender/core": "workspace:*",
+    "esbuild": "^0.28.1"
   }
 }

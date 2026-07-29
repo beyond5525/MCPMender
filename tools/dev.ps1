@@ -1,6 +1,12 @@
 $ErrorActionPreference = "Stop"
 
-$toolRoot = "F:\GemeHuanJing\MCPulseTools"
+$preferredToolRoot = "F:\GemeHuanJing\MCPMenderTools"
+$legacyToolRoot = "F:\GemeHuanJing\MCPulseTools"
+$toolRoot = if (Test-Path (Join-Path $preferredToolRoot "node\node.exe")) {
+    $preferredToolRoot
+} else {
+    $legacyToolRoot
+}
 $nodeDir = Join-Path $toolRoot "node"
 $pnpmScript = Join-Path $toolRoot "pnpm\bin\pnpm.mjs"
 

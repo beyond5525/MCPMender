@@ -10,18 +10,16 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;"
     />
-    <title>MCPulse</title>
+    <title>MCPMender</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="app-shell">
       <header class="topbar">
         <div class="brand">
-          <span class="brand-mark" aria-hidden="true">
-            <span></span><span></span><span></span>
-          </span>
+          <img class="brand-mark" src="./icon.png" alt="" aria-hidden="true" />
           <div>
-            <strong data-i18n="app.name">MCPulse</strong>
+            <strong data-i18n="app.name">MCPMender</strong>
             <small data-i18n="app.tagline">Local MCP diagnostics and safe repair</small>
           </div>
         </div>
@@ -129,7 +127,7 @@
         <button class="icon-button" id="dialog-close" aria-label="Close">×</button>
       </div>
       <p data-i18n="repair.previewDetail">
-        MCPulse will back up the original configuration before applying these low-risk changes.
+        MCPMender will back up the original configuration before applying these low-risk changes.
       </p>
       <div id="repair-list" class="repair-list"></div>
       <div class="dialog-actions">

@@ -61,7 +61,7 @@ export async function applySafeRepairs(
 ): Promise<RepairBatchResult> {
   const transactionId = `${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 8)}`;
   const backupRoot =
-    options.backupRoot ?? path.join(os.homedir(), ".mcpulse", "backups");
+    options.backupRoot ?? path.join(os.homedir(), ".mcpmender", "backups");
   const transactionDir = path.join(backupRoot, transactionId);
   await mkdir(transactionDir, { recursive: true });
 
@@ -114,7 +114,7 @@ export async function applySafeRepairs(
         throw new Error("Repair produced invalid JSONC");
       }
 
-      const tempPath = `${configPath}.mcpulse-${transactionId}.tmp`;
+      const tempPath = `${configPath}.mcpmender-${transactionId}.tmp`;
       await writeFile(tempPath, updated, "utf8");
       await copyFile(tempPath, configPath);
       await rm(tempPath, { force: true });
@@ -130,7 +130,7 @@ export async function applySafeRepairs(
       }
     } catch {
       await copyFile(backupPath, configPath);
-      await rm(`${configPath}.mcpulse-${transactionId}.tmp`, { force: true });
+      await rm(`${configPath}.mcpmender-${transactionId}.tmp`, { force: true });
       for (const repair of allowed) {
         results.push({
           repairId: repair.id,
@@ -165,7 +165,7 @@ export async function rollbackRepair(
   backupPath: string,
   configPath: string
 ): Promise<void> {
-  const tempPath = `${configPath}.mcpulse-rollback.tmp`;
+  const tempPath = `${configPath}.mcpmender-rollback.tmp`;
   await copyFile(backupPath, tempPath);
   await copyFile(tempPath, configPath);
   await rm(tempPath, { force: true });

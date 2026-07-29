@@ -89,28 +89,11 @@ body::before {
 }
 
 .brand-mark {
-  display: flex;
   width: 34px;
   height: 34px;
-  padding: 7px;
-  align-items: end;
-  justify-content: center;
-  gap: 3px;
-  border: 1px solid rgba(80, 230, 208, 0.35);
-  border-radius: 10px;
-  background: linear-gradient(145deg, rgba(80, 230, 208, 0.18), rgba(96, 165, 250, 0.12));
-  box-shadow: 0 0 22px rgba(80, 230, 208, 0.1);
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(32, 216, 232, 0.2));
 }
-
-.brand-mark span {
-  width: 4px;
-  border-radius: 4px;
-  background: var(--cyan);
-}
-
-.brand-mark span:nth-child(1) { height: 9px; }
-.brand-mark span:nth-child(2) { height: 18px; }
-.brand-mark span:nth-child(3) { height: 13px; }
 
 .language-control {
   -webkit-app-region: no-drag;

@@ -9,13 +9,15 @@ const TOKEN_PATTERNS = [
 ];
 
 export function redactText(value: string, homeDir?: string): string {
-  let result = value.replace(SECRET_KEY_PATTERN, "$1[REDACTED]");
+  let result = value;
   for (const pattern of TOKEN_PATTERNS) {
     result = result.replace(pattern, "[REDACTED]");
   }
+  result = result.replace(SECRET_KEY_PATTERN, "$1[REDACTED]");
   if (homeDir) {
     result = result.split(homeDir).join("~");
     result = result.split(homeDir.replaceAll("\\", "/")).join("~");
+    result = result.replaceAll("~\\", "~/");
   }
   return result;
 }

@@ -1,22 +1,19 @@
 import type {
-  RepairAction,
   RepairBatchResult,
   ProbeReport,
   ProbeTarget,
   ScanReport
-} from "@mcpulse/core";
+} from "@mcpmender/core";
 
 declare global {
   interface Window {
-    mcpulse: {
+    mcpmender: {
       scan(): Promise<ScanReport>;
       selectProject(): Promise<{ path?: string; report?: ScanReport }>;
       planProbe(): Promise<ProbeTarget[]>;
       runProbe(): Promise<ProbeReport>;
-      repairSafe(repairs: RepairAction[]): Promise<RepairBatchResult>;
-      exportReport(
-        report: ScanReport
-      ): Promise<{ saved: boolean; path?: string }>;
+      repairSafe(repairIds: string[]): Promise<RepairBatchResult>;
+      exportReport(): Promise<{ saved: boolean; path?: string }>;
       openHelp(): Promise<void>;
     };
   }

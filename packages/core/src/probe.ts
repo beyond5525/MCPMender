@@ -143,7 +143,7 @@ async function probeTarget(
     }
 
     const client = new Client(
-      { name: "mcpulse-diagnostics", version: "0.2.0" },
+      { name: "mcpmender-diagnostics", version: "0.3.0-beta.1" },
       { capabilities: {} }
     );
     const signal = AbortSignal.timeout(timeoutMs);

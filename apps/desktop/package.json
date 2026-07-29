@@ -1,10 +1,10 @@
 {
-  "name": "@mcpulse/desktop",
-  "version": "0.2.0",
-  "description": "Local MCP diagnostics, live connection checks, and safe repair.",
-  "author": "MCPulse contributors",
+  "name": "@mcpmender/desktop",
+  "version": "0.3.0-beta.1",
+  "description": "MCPMender (协议修匠): local MCP diagnostics, live connection checks, and safe repair.",
+  "author": "MCPMender contributors",
   "license": "Apache-2.0",
-  "desktopName": "MCPulse",
+  "desktopName": "MCPMender",
   "private": true,
   "main": "dist/main.cjs",
   "scripts": {
@@ -17,16 +17,17 @@
     "dist:linux": "pnpm build && electron-builder --linux AppImage tar.gz"
   },
   "dependencies": {
-    "@mcpulse/core": "workspace:*"
+    "@mcpmender/core": "workspace:*"
   },
   "devDependencies": {
-    "electron": "^37.1.0",
+    "electron": "43.2.0",
     "electron-builder": "^26.0.12",
-    "esbuild": "^0.25.5"
+    "esbuild": "^0.28.1"
   },
   "build": {
-    "appId": "org.mcpulse.desktop",
-    "productName": "MCPulse",
+    "appId": "io.mcpmender.desktop",
+    "productName": "MCPMender",
+    "copyright": "Copyright © 2026 MCPMender contributors",
     "directories": {
       "output": "release"
     },
@@ -45,7 +46,18 @@
       }
     ],
     "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "loadBrowserProcessSpecificV8Snapshot": false,
+      "grantFileProtocolExtraPrivileges": true
+    },
     "win": {
+      "icon": "assets/icons/icon.ico",
       "target": [
         {
           "target": "portable",
@@ -54,24 +66,31 @@
           ]
         }
       ],
-      "artifactName": "MCPulse-${version}-Windows-${arch}.${ext}"
+      "artifactName": "MCPMender-${version}-Windows-${arch}.${ext}"
     },
     "mac": {
+      "icon": "assets/icons/icon.icns",
+      "category": "public.app-category.developer-tools",
+      "identity": "-",
+      "hardenedRuntime": true,
+      "entitlements": "assets/entitlements.mac.plist",
+      "entitlementsInherit": "assets/entitlements.mac.plist",
       "target": [
         "dmg",
         "zip"
       ],
-      "artifactName": "MCPulse-${version}-macOS-${arch}.${ext}"
+      "artifactName": "MCPMender-${version}-macOS-${arch}.${ext}"
     },
     "linux": {
-      "executableName": "mcpulse",
+      "icon": "assets/icons",
+      "executableName": "mcpmender",
       "syncDesktopName": true,
       "target": [
         "AppImage",
         "tar.gz"
       ],
       "category": "Development",
-      "artifactName": "MCPulse-${version}-Linux-${arch}.${ext}"
+      "artifactName": "MCPMender-${version}-Linux-${arch}.${ext}"
     }
   }
 }

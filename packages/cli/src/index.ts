@@ -12,7 +12,7 @@ import {
   translate,
   type Locale,
   type ScanReport
-} from "@mcpulse/core";
+} from "@mcpmender/core";
 
 function argValue(name: string): string | undefined {
   const direct = process.argv.find((arg) => arg.startsWith(`${name}=`));
@@ -26,7 +26,7 @@ const locale: Locale = normalizeLocale(
   argValue("--lang") ?? process.env.LANG ?? Intl.DateTimeFormat().resolvedOptions().locale
 );
 const json = process.argv.includes("--json");
-const VERSION = "0.2.0";
+const VERSION = "0.3.0-beta.1";
 
 function t(key: string, params?: Record<string, string | number>): string {
   return translate(locale, key, params);
@@ -76,11 +76,11 @@ function printHuman(report: ScanReport): void {
 
 function printHelp(): void {
   process.stdout.write(
-    `MCPulse ${VERSION}\n\n` +
+    `MCPMender ${VERSION}\n\n` +
       `${t("cli.usage")}\n\n` +
-      `  mcpulse scan [--lang en|zh-CN|ja] [--json]\n` +
-      `  mcpulse probe [--run] [--timeout 8000] [--server name] [--json]\n` +
-      `  mcpulse repair [--apply-safe] [--json]\n\n` +
+      `  mcpmender scan [--lang en|zh-CN|ja] [--json]\n` +
+      `  mcpmender probe [--run] [--timeout 8000] [--server name] [--json]\n` +
+      `  mcpmender repair [--apply-safe] [--json]\n\n` +
       `${t("cli.scanHelp")}\n` +
       `${t("cli.probeHelp")}\n` +
       `${t("cli.repairHelp")}\n`
@@ -112,10 +112,24 @@ async function main(): Promise<void> {
     printHelp();
     return;
   }
+  if (!["scan", "probe", "repair"].includes(command)) {
+    process.stderr.write(
+      `Unknown command: ${command}\nRun "mcpmender --help" to see available commands.\n`
+    );
+    process.exitCode = 1;
+    return;
+  }
 
   if (command === "probe") {
     const run = process.argv.includes("--run");
     const timeout = Number(argValue("--timeout") ?? "8000");
+    if (!Number.isFinite(timeout) || timeout <= 0 || timeout > 300_000) {
+      process.stderr.write(
+        "--timeout must be a number between 1 and 300000 milliseconds.\n"
+      );
+      process.exitCode = 1;
+      return;
+    }
     const selected = process.argv
       .filter((arg) => arg.startsWith("--server="))
       .map((arg) => arg.slice("--server=".length));
@@ -148,7 +162,7 @@ async function main(): Promise<void> {
     }
 
     const probe = await probeMcpConfigurations({
-      timeoutMs: Number.isFinite(timeout) ? timeout : 8_000,
+      timeoutMs: timeout,
       serverNames: selected
     });
     if (json) {
