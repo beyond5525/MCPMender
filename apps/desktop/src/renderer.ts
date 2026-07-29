@@ -5,6 +5,8 @@ import {
 import type {
   ClientScanResult,
   Locale,
+  ProbeReport,
+  ProbeTarget,
   ScanReport
 } from "@mcpulse/core/types";
 
@@ -15,9 +17,13 @@ let report: ScanReport | undefined;
 let toastTimer: number | undefined;
 let lastScanAt: Date | undefined;
 let isScanning = false;
+let isProbing = false;
+let lastProbeReport: ProbeReport | undefined;
+let selectedProjectPath: string | undefined;
 
 const languageSelect = document.querySelector<HTMLSelectElement>("#language-select")!;
 const scanButton = document.querySelector<HTMLButtonElement>("#scan-button")!;
+const probeButton = document.querySelector<HTMLButtonElement>("#probe-button")!;
 const repairButton = document.querySelector<HTMLButtonElement>("#repair-button")!;
 const exportButton = document.querySelector<HTMLButtonElement>("#export-button")!;
 const helpButton = document.querySelector<HTMLButtonElement>("#help-button")!;
@@ -26,6 +32,12 @@ const scanStatus = document.querySelector<HTMLElement>("#scan-status")!;
 const clientList = document.querySelector<HTMLElement>("#client-list")!;
 const repairDialog = document.querySelector<HTMLDialogElement>("#repair-dialog")!;
 const repairList = document.querySelector<HTMLElement>("#repair-list")!;
+const probeDialog = document.querySelector<HTMLDialogElement>("#probe-dialog")!;
+const probeList = document.querySelector<HTMLElement>("#probe-list")!;
+const probeResults = document.querySelector<HTMLElement>("#probe-results")!;
+const workspaceButton =
+  document.querySelector<HTMLButtonElement>("#workspace-button")!;
+const workspacePath = document.querySelector<HTMLElement>("#workspace-path")!;
 const toast = document.querySelector<HTMLElement>("#toast")!;
 
 function t(key: string, params?: Record<string, string | number>): string {
@@ -48,7 +60,9 @@ function applyTranslations(): void {
     element.textContent = t(element.dataset.i18n!);
   }
   updateScanStatus();
+  workspacePath.textContent = selectedProjectPath ?? t("workspace.none");
   if (report) renderReport(report);
+  if (lastProbeReport) renderProbeReport(lastProbeReport);
 }
 
 function updateScanStatus(): void {
@@ -101,6 +115,8 @@ function renderReport(nextReport: ScanReport): void {
   );
 
   repairButton.disabled = nextReport.summary.safeRepairs === 0;
+  probeButton.disabled =
+    isProbing || nextReport.summary.configuredServers === 0;
   exportButton.disabled = false;
 
   clientList.innerHTML = nextReport.clients
@@ -152,6 +168,64 @@ function renderReport(nextReport: ScanReport): void {
         </article>`;
     })
     .join("");
+}
+
+function describeProbeTarget(target: ProbeTarget): string {
+  if (target.server.url) return target.server.url;
+  return [target.server.command, ...target.server.args]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function probeStatusLabel(status: string): string {
+  const keys: Record<string, string> = {
+    connected: "probe.connected",
+    "auth-required": "probe.authRequired",
+    timeout: "probe.timeout",
+    "not-found": "probe.notFound",
+    failed: "probe.failed",
+    unsupported: "probe.unsupported"
+  };
+  return t(keys[status] ?? "probe.failed");
+}
+
+function renderProbeReport(nextReport: ProbeReport): void {
+  lastProbeReport = nextReport;
+  probeResults.hidden = false;
+  probeResults.innerHTML = `
+    <h2>${escapeHtml(
+      t("probe.complete", {
+        connected: nextReport.summary.connected,
+        total: nextReport.summary.total
+      })
+    )}</h2>
+    <div class="probe-result-grid">
+      ${nextReport.results
+        .map((result) => {
+          const detail =
+            result.status === "connected"
+              ? result.toolCount === undefined
+                ? t("probe.noTools")
+                : t("probe.tools", { count: result.toolCount })
+              : result.detail ?? "";
+          const identity = [result.serverNameReported, result.serverVersion]
+            .filter(Boolean)
+            .join(" ");
+          return `
+            <article class="probe-result ${escapeHtml(result.status)}">
+              <strong>${escapeHtml(
+                `${result.clientName} / ${result.serverName}`
+              )}</strong>
+              <span>${escapeHtml(probeStatusLabel(result.status))} · ${
+                result.durationMs
+              } ms</span>
+              <small>${escapeHtml(
+                [identity, detail].filter(Boolean).join(" · ")
+              )}</small>
+            </article>`;
+        })
+        .join("")}
+    </div>`;
 }
 
 function showToast(message: string): void {
@@ -219,6 +293,59 @@ function openRepairPreview(): void {
   repairDialog.showModal();
 }
 
+async function openProbePreview(): Promise<void> {
+  probeButton.disabled = true;
+  try {
+    const targets = await window.mcpulse.planProbe();
+    if (targets.length === 0) {
+      showToast(t("probe.none"));
+      return;
+    }
+    probeList.innerHTML = targets
+      .map(
+        (target) => `
+          <article class="repair-item">
+            <strong>${escapeHtml(
+              `${target.clientName} / ${target.server.name}`
+            )}</strong>
+            <code>${escapeHtml(describeProbeTarget(target))}</code>
+          </article>`
+      )
+      .join("");
+    probeDialog.showModal();
+  } catch {
+    showToast(t("scan.failed"));
+  } finally {
+    probeButton.disabled =
+      isProbing || !report || report.summary.configuredServers === 0;
+  }
+}
+
+async function runDeepProbe(): Promise<void> {
+  if (isProbing) return;
+  isProbing = true;
+  probeDialog.close();
+  probeButton.disabled = true;
+  probeButton.textContent = t("action.deepChecking");
+  try {
+    const nextReport = await window.mcpulse.runProbe();
+    renderProbeReport(nextReport);
+    showToast(
+      t("probe.complete", {
+        connected: nextReport.summary.connected,
+        total: nextReport.summary.total
+      })
+    );
+  } catch {
+    showToast(t("probe.failed"));
+  } finally {
+    isProbing = false;
+    probeButton.textContent = t("action.deepCheck");
+    probeButton.disabled =
+      !report || report.summary.configuredServers === 0;
+  }
+}
+
 languageSelect.addEventListener("change", () => {
   locale = normalizeLocale(languageSelect.value);
   localStorage.setItem("mcpulse.locale", locale);
@@ -226,6 +353,7 @@ languageSelect.addEventListener("change", () => {
 });
 
 scanButton.addEventListener("click", () => void runScan(true));
+probeButton.addEventListener("click", () => void openProbePreview());
 repairButton.addEventListener("click", openRepairPreview);
 exportButton.addEventListener("click", async () => {
   if (!report) return;
@@ -233,6 +361,32 @@ exportButton.addEventListener("click", async () => {
   if (result.saved) showToast(t("report.saved"));
 });
 helpButton.addEventListener("click", () => void window.mcpulse.openHelp());
+workspaceButton.addEventListener("click", async () => {
+  workspaceButton.disabled = true;
+  try {
+    const result = await window.mcpulse.selectProject();
+    if (result.path) {
+      selectedProjectPath = result.path;
+      workspacePath.textContent = result.path;
+    }
+    if (result.report) {
+      renderReport(result.report);
+      lastScanAt = new Date();
+      updateScanStatus();
+    }
+  } finally {
+    workspaceButton.disabled = false;
+  }
+});
+document
+  .querySelector("#probe-dialog-close")!
+  .addEventListener("click", () => probeDialog.close());
+document
+  .querySelector("#probe-cancel")!
+  .addEventListener("click", () => probeDialog.close());
+document
+  .querySelector("#probe-confirm")!
+  .addEventListener("click", () => void runDeepProbe());
 
 document.querySelector("#dialog-close")!.addEventListener("click", () => repairDialog.close());
 document.querySelector("#dialog-cancel")!.addEventListener("click", () => repairDialog.close());

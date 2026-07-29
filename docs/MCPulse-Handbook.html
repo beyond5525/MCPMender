@@ -68,15 +68,20 @@
     }
     .brand strong, .brand small { display: block; }
     .brand small { margin-top: 3px; color: var(--muted); font-size: 11px; }
-    .language {
+    .language, .print-button {
       width: calc(100% - 28px);
-      margin-bottom: 26px;
       padding: 10px 12px;
       color: var(--text);
       border: 1px solid var(--line);
       border-radius: 9px;
       background: var(--panel);
     }
+    .language { margin-bottom: 10px; }
+    .print-button {
+      margin-bottom: 26px;
+      cursor: pointer;
+    }
+    .print-button:hover { border-color: rgba(89, 227, 206, .45); }
     nav { padding-right: 28px; }
     nav a {
       display: block;
@@ -249,7 +254,7 @@
         border-bottom: 1px solid var(--line);
       }
       nav { display: none; }
-      .language { width: 100%; }
+      .language, .print-button { width: 100%; }
       .side-note { margin-right: 0; }
       main { padding-top: 28px; }
       .cards { grid-template-columns: 1fr; }
@@ -280,6 +285,7 @@
         <option value="zh-CN">简体中文</option>
         <option value="ja">日本語</option>
       </select>
+      <button id="print-book" class="print-button">Print / Save PDF</button>
       <nav id="toc"></nav>
       <div class="side-note" id="side-note"></div>
     </aside>
@@ -288,7 +294,8 @@
   <script>
     const handbook = {
       en: {
-        edition: "Offline Handbook · v0.1",
+        edition: "Offline Handbook · v0.2",
+        printLabel: "Print / Save PDF",
         sideNote: "This handbook is included with MCPulse and works completely offline. Use your browser’s Print command to save the current language as PDF.",
         hero: {
           eyebrow: "GET STARTED WITH CONFIDENCE",
@@ -312,30 +319,36 @@
             html: `<h3>Desktop</h3><ol class="steps">
               <li>Download the package for your operating system and open MCPulse.</li>
               <li>Choose your language in the top-right corner. The choice is remembered.</li>
+              <li>Select a project folder when you want MCPulse to include project-level VS Code configuration.</li>
               <li>Select <strong>Scan now</strong>. The default scan is read-only.</li>
               <li>Review each client card and its green, yellow, or red result.</li>
+              <li>When you need proof that a server can really start and speak MCP, select <strong>Deep connection check</strong>, review the commands, and confirm.</li>
               <li>If safe repairs are available, open the preview and confirm only after reviewing the before/after command.</li>
             </ol>
             <h3>CLI</h3><pre>mcpulse scan
 mcpulse scan --lang zh-CN
 mcpulse scan --lang ja
-mcpulse scan --json</pre>`
+mcpulse scan --json
+mcpulse probe
+mcpulse probe --run</pre>`
           },
           {
             id: "desktop", title: "3. Desktop interface", lead: "The dashboard keeps diagnosis understandable even if you do not normally use a terminal.",
             html: `<table><thead><tr><th>Area</th><th>Purpose</th></tr></thead><tbody>
               <tr><td>Summary cards</td><td>Show detected clients, configured servers, problems, and safe repairs.</td></tr>
               <tr><td>Client cards</td><td>Show the exact configuration path, server count, status, and findings for each supported AI tool.</td></tr>
+              <tr><td>Select project folder</td><td>Adds the selected project’s <code>.vscode/mcp.json</code> to scan and deep-check scope. MCPulse never guesses from the portable EXE extraction folder.</td></tr>
               <tr><td>Scan now</td><td>Repeats a read-only discovery and static validation pass.</td></tr>
+              <tr><td>Deep connection check</td><td>After confirmation, temporarily starts local servers or contacts remote endpoints, performs a real MCP handshake, lists tools when supported, and closes the connection.</td></tr>
               <tr><td>Repair safe issues</td><td>Opens a before/after preview. It does not write immediately.</td></tr>
               <tr><td>Export report</td><td>Creates a structured JSON report with home paths and common token patterns redacted.</td></tr>
-              <tr><td>Tutorial & help</td><td>Opens this offline handbook in your default browser.</td></tr>
+              <tr><td>Tutorial & help</td><td>Opens this offline handbook in a separate MCPulse window.</td></tr>
             </tbody></table>`
           },
           {
             id: "statuses", title: "4. Reading scan results", lead: "A color is a decision aid, not a security verdict.",
             html: `<table><thead><tr><th>Status</th><th>Meaning</th><th>What to do</th></tr></thead><tbody>
-              <tr><td>Green · Healthy</td><td>No known problem was found by the checks that ran.</td><td>No action is required. A future protocol probe may still reveal server-specific problems.</td></tr>
+              <tr><td>Green · Healthy</td><td>No known problem was found by the checks that ran.</td><td>Use Deep connection check when you also need to verify server startup and the MCP handshake.</td></tr>
               <tr><td>Yellow · Needs attention</td><td>A common compatibility risk was found.</td><td>Read the explanation and preview any offered fix.</td></tr>
               <tr><td>Red · Problem found</td><td>The configuration is invalid or incomplete.</td><td>Do not force an automatic repair unless MCPulse explicitly marks one safe.</td></tr>
               <tr><td>Gray · Not configured</td><td>No supported configuration file was found at the checked path.</td><td>This is normal if you do not use that client.</td></tr>
@@ -364,6 +377,9 @@ mcpulse repair --apply-safe</pre>
               <tr><td><code>mcpulse scan --lang en</code></td><td>English output.</td></tr>
               <tr><td><code>mcpulse scan --lang zh-CN</code></td><td>Simplified Chinese output.</td></tr>
               <tr><td><code>mcpulse scan --lang ja</code></td><td>Japanese output.</td></tr>
+              <tr><td><code>mcpulse probe</code></td><td>Preview every command or remote endpoint that a deep check would use. Nothing is started.</td></tr>
+              <tr><td><code>mcpulse probe --run</code></td><td>Perform real MCP initialize handshakes with an 8-second timeout and guaranteed connection cleanup.</td></tr>
+              <tr><td><code>mcpulse probe --run --server name</code></td><td>Deep-check only one named server.</td></tr>
               <tr><td><code>mcpulse repair --plan</code></td><td>Show safe repair proposals without writing.</td></tr>
               <tr><td><code>mcpulse repair --apply-safe</code></td><td>Back up and apply eligible safe repairs.</td></tr>
             </tbody></table>`
@@ -376,7 +392,8 @@ mcpulse repair --apply-safe</pre>
               <li>Exported reports replace the user home path and common token shapes.</li>
               <li>Backups remain local and may still contain original secrets; protect them like the source configuration.</li>
               <li>MCPulse does not claim that a discovered MCP server is safe.</li>
-              <li>A future active probe must clearly state that it will start the selected server process.</li>
+              <li>Deep connection check always shows a preview and requires confirmation because configured commands can execute third-party code and <code>npx</code> may download packages.</li>
+              <li>Every deep check has a timeout and closes its process or HTTP connection when finished.</li>
             </ul>
             <div class="callout"><strong>Before sharing a report</strong><p>Open it and perform a final human review. No automated redactor can guarantee detection of every custom secret format.</p></div>`
           },
@@ -405,6 +422,7 @@ mcpulse repair --apply-safe</pre>
           {
             id: "faq", title: "10. Frequently asked questions", lead: "Quick answers to the questions most users encounter first.",
             html: `<details open><summary>Does MCPulse modify my files during Scan?</summary><p>No. Scan is read-only. A file is changed only after you open a repair preview and explicitly confirm an eligible repair.</p></details>
+            <details><summary>Why does Scan finish without proving the server works?</summary><p>Scan checks files, syntax, commands, environment references, and URLs without running third-party code. Use Deep connection check when you explicitly want MCPulse to start or contact the configured server and perform a real handshake.</p></details>
             <details><summary>Why is a client shown as Not configured?</summary><p>MCPulse did not find a supported configuration file at its known location. This is normal when the client is not installed or has never configured MCP.</p></details>
             <details><summary>Can MCPulse create or recover my token?</summary><p>No. It can identify that a required environment variable is absent, but authentication remains with the relevant provider.</p></details>
             <details><summary>Can every problem be repaired automatically?</summary><p>No. Safe repair is reserved for deterministic configuration transformations. Remote outages, permissions, enterprise policies, credentials, and server bugs require manual action.</p></details>
@@ -441,7 +459,8 @@ mcpulse repair --apply-safe</pre>
         footer: "MCPulse Offline Handbook · Pre-release documentation. Features may change before v1.0."
       },
       "zh-CN": {
-        edition: "离线使用手册 · v0.1",
+        edition: "离线使用手册 · v0.2",
+        printLabel: "打印 / 保存为 PDF",
         sideNote: "本手册随 MCPulse 一起提供，可完全离线使用。使用浏览器的“打印”功能，可以把当前语言保存为 PDF。",
         hero: {
           eyebrow: "放心开始使用",
@@ -465,30 +484,36 @@ mcpulse repair --apply-safe</pre>
             html: `<h3>Desktop 图形界面</h3><ol class="steps">
               <li>下载适合自己操作系统的安装包或便携版，然后打开 MCPulse。</li>
               <li>在右上角选择语言。软件会记住你的选择。</li>
+              <li>需要检测 VS Code 项目级配置时，先选择项目文件夹。</li>
               <li>点击<strong>立即检测</strong>。默认检测只读取，不修改任何配置。</li>
               <li>查看每个客户端卡片上的绿色、黄色或红色结果。</li>
+              <li>需要确认服务能否真正启动并使用 MCP 协议时，点击<strong>深度连接检测</strong>，检查命令列表后确认。</li>
               <li>如果存在可安全修复的问题，先查看修改前后内容，确认无误后再执行。</li>
             </ol>
             <h3>命令行</h3><pre>mcpulse scan
 mcpulse scan --lang zh-CN
 mcpulse scan --lang ja
-mcpulse scan --json</pre>`
+mcpulse scan --json
+mcpulse probe
+mcpulse probe --run</pre>`
           },
           {
             id: "desktop", title: "3. Desktop 界面说明", lead: "即使不习惯命令行，也可以通过仪表盘完成检测、查看结果和安全修复。",
             html: `<table><thead><tr><th>区域</th><th>作用</th></tr></thead><tbody>
               <tr><td>顶部统计卡</td><td>显示已发现客户端、MCP 服务数量、问题数量和可安全修复数量。</td></tr>
               <tr><td>客户端卡片</td><td>显示配置路径、服务数量、状态和每一条检查结果。</td></tr>
+              <tr><td>选择项目文件夹</td><td>把所选项目中的 <code>.vscode/mcp.json</code> 加入普通检测和深度检测范围，不会把便携版临时解压目录误当作项目。</td></tr>
               <tr><td>立即检测</td><td>重新执行只读发现和静态配置检查。</td></tr>
+              <tr><td>深度连接检测</td><td>确认后临时启动本地服务或连接远程地址，执行真实 MCP 握手，在支持时读取工具列表，完成后关闭连接。</td></tr>
               <tr><td>一键修复安全问题</td><td>先打开修改预览，不会点击后立即写入。</td></tr>
               <tr><td>导出脱敏报告</td><td>生成结构化 JSON，并隐藏用户主目录和常见 Token。</td></tr>
-              <tr><td>教程与帮助</td><td>使用默认浏览器打开这份离线手册。</td></tr>
+              <tr><td>教程与帮助</td><td>在独立的 MCPulse 窗口中打开这份离线手册。</td></tr>
             </tbody></table>`
           },
           {
             id: "statuses", title: "4. 怎么看检测结果", lead: "颜色用于帮助决定下一步，不代表对第三方程序作出了完整的安全认证。",
             html: `<table><thead><tr><th>状态</th><th>含义</th><th>应该怎么做</th></tr></thead><tbody>
-              <tr><td>绿色 · 正常</td><td>已经执行的检查没有发现已知问题。</td><td>通常不需要操作；以后增加的真实协议检测仍可能发现服务自身问题。</td></tr>
+              <tr><td>绿色 · 正常</td><td>已经执行的检查没有发现已知问题。</td><td>如果还需要验证服务启动和 MCP 握手，请执行深度连接检测。</td></tr>
               <tr><td>黄色 · 需要关注</td><td>发现常见兼容性风险。</td><td>阅读解释，并查看可能提供的修复方案。</td></tr>
               <tr><td>红色 · 发现问题</td><td>配置无效或不完整。</td><td>除非明确标记为安全修复，否则不要强行自动修改。</td></tr>
               <tr><td>灰色 · 尚未配置</td><td>在已知位置没有找到配置文件。</td><td>如果你没有使用该客户端，这是正常情况。</td></tr>
@@ -517,6 +542,9 @@ mcpulse repair --apply-safe</pre>
               <tr><td><code>mcpulse scan --lang en</code></td><td>使用英文输出。</td></tr>
               <tr><td><code>mcpulse scan --lang zh-CN</code></td><td>使用简体中文输出。</td></tr>
               <tr><td><code>mcpulse scan --lang ja</code></td><td>使用日语输出。</td></tr>
+              <tr><td><code>mcpulse probe</code></td><td>预览深度检测将使用的命令和远程地址，不会启动服务。</td></tr>
+              <tr><td><code>mcpulse probe --run</code></td><td>执行真实 MCP 初始化握手，默认超时 8 秒，并保证清理连接。</td></tr>
+              <tr><td><code>mcpulse probe --run --server 名称</code></td><td>只深度检测指定服务。</td></tr>
               <tr><td><code>mcpulse repair --plan</code></td><td>只显示安全修复方案，不写入配置。</td></tr>
               <tr><td><code>mcpulse repair --apply-safe</code></td><td>备份并应用符合条件的安全修复。</td></tr>
             </tbody></table>`
@@ -529,7 +557,8 @@ mcpulse repair --apply-safe</pre>
               <li>导出报告会隐藏用户主目录和常见 Token 形式。</li>
               <li>备份保存在本地，但它仍可能包含原配置中的秘密，应像保护原配置一样保护备份。</li>
               <li>MCPulse 不会因为发现一个 MCP 就宣称它安全可信。</li>
-              <li>将来的主动协议检测必须明确提示用户会启动被选择的服务进程。</li>
+              <li>深度连接检测会先显示预览并要求确认，因为配置命令可能执行第三方代码，<code>npx</code> 也可能下载软件包。</li>
+              <li>每次深度检测都有超时限制，完成后会关闭子进程或 HTTP 连接。</li>
             </ul>
             <div class="callout"><strong>分享报告之前</strong><p>请打开报告进行最后一次人工检查。任何自动脱敏工具都无法保证识别所有自定义秘密格式。</p></div>`
           },
@@ -558,6 +587,7 @@ mcpulse repair --apply-safe</pre>
           {
             id: "faq", title: "10. 常见问题", lead: "这里集中回答用户刚开始使用时最常遇到的问题。",
             html: `<details open><summary>点击“立即检测”会修改文件吗？</summary><p>不会。检测是只读操作。只有用户打开修复预览并明确确认符合条件的修复后，配置才会改变。</p></details>
+            <details><summary>为什么“立即检测”不能证明服务真的可用？</summary><p>立即检测不会运行第三方代码，它只检查文件、语法、命令、环境变量引用和 URL。需要真正启动或连接服务并执行 MCP 握手时，请使用“深度连接检测”。</p></details>
             <details><summary>为什么某个客户端显示“尚未配置”？</summary><p>MCPulse 没有在已知位置找到受支持的配置文件。如果客户端未安装或从未配置 MCP，这是正常情况。</p></details>
             <details><summary>MCPulse 能替我创建或找回 Token 吗？</summary><p>不能。它可以提示缺少必要环境变量，但账号授权必须通过对应服务商完成。</p></details>
             <details><summary>所有问题都能自动修复吗？</summary><p>不能。安全修复仅限于确定性的配置转换。远程故障、权限、企业策略、账号凭据和服务程序缺陷需要人工处理。</p></details>
@@ -594,7 +624,8 @@ mcpulse repair --apply-safe</pre>
         footer: "MCPulse 离线使用手册 · 当前为预发布文档，v1.0 前功能可能调整。"
       },
       ja: {
-        edition: "オフラインハンドブック · v0.1",
+        edition: "オフラインハンドブック · v0.2",
+        printLabel: "印刷 / PDF に保存",
         sideNote: "このハンドブックは MCPulse に同梱され、完全にオフラインで利用できます。ブラウザーの印刷機能で、現在の言語を PDF として保存できます。",
         hero: {
           eyebrow: "安心して使い始める",
@@ -618,30 +649,36 @@ mcpulse repair --apply-safe</pre>
             html: `<h3>Desktop</h3><ol class="steps">
               <li>OS に合ったパッケージをダウンロードして MCPulse を開きます。</li>
               <li>右上で言語を選びます。選択内容は保存されます。</li>
+              <li>VS Code のプロジェクト設定も診断する場合は、プロジェクトフォルダーを選択します。</li>
               <li><strong>今すぐ診断</strong>を選びます。既定の診断は読み取り専用です。</li>
               <li>各クライアントカードの緑・黄・赤の結果を確認します。</li>
+              <li>サーバーの起動と MCP 通信を確認する場合は、<strong>詳細接続診断</strong>を選び、コマンド一覧を確認して実行します。</li>
               <li>安全な修復がある場合、変更前後を確認してから実行します。</li>
             </ol>
             <h3>CLI</h3><pre>mcpulse scan
 mcpulse scan --lang zh-CN
 mcpulse scan --lang ja
-mcpulse scan --json</pre>`
+mcpulse scan --json
+mcpulse probe
+mcpulse probe --run</pre>`
           },
           {
             id: "desktop", title: "3. Desktop 画面", lead: "ターミナルを使わない方でも、ダッシュボードから診断と安全な修復を行えます。",
             html: `<table><thead><tr><th>領域</th><th>用途</th></tr></thead><tbody>
               <tr><td>サマリーカード</td><td>検出したクライアント、MCP サーバー、問題、安全な修復の数を表示します。</td></tr>
               <tr><td>クライアントカード</td><td>設定パス、サーバー数、状態、診断結果を表示します。</td></tr>
+              <tr><td>プロジェクトを選択</td><td>選択したプロジェクトの <code>.vscode/mcp.json</code> を通常診断と詳細診断に追加します。ポータブル EXE の一時展開先をプロジェクトとして扱いません。</td></tr>
               <tr><td>今すぐ診断</td><td>読み取り専用の検出と静的チェックを再実行します。</td></tr>
+              <tr><td>詳細接続診断</td><td>確認後、ローカルサーバーの一時起動またはリモート接続を行い、実際の MCP ハンドシェイクとツール一覧を確認して接続を閉じます。</td></tr>
               <tr><td>安全な問題を一括修復</td><td>書き込む前に変更プレビューを開きます。</td></tr>
               <tr><td>匿名化レポート</td><td>ホームパスや一般的な Token を隠した JSON を作成します。</td></tr>
-              <tr><td>チュートリアルとヘルプ</td><td>このオフラインハンドブックを既定ブラウザーで開きます。</td></tr>
+              <tr><td>チュートリアルとヘルプ</td><td>このオフラインハンドブックを MCPulse の別ウィンドウで開きます。</td></tr>
             </tbody></table>`
           },
           {
             id: "statuses", title: "4. 診断結果の読み方", lead: "色は次の行動を決める目安であり、第三者サーバーの安全性を保証するものではありません。",
             html: `<table><thead><tr><th>状態</th><th>意味</th><th>対応</th></tr></thead><tbody>
-              <tr><td>緑 · 正常</td><td>実行したチェックで既知の問題が見つかりませんでした。</td><td>通常は操作不要です。将来のプロトコル診断でサーバー固有の問題が見つかる可能性はあります。</td></tr>
+              <tr><td>緑 · 正常</td><td>実行したチェックで既知の問題が見つかりませんでした。</td><td>サーバー起動と MCP ハンドシェイクも確認する場合は詳細接続診断を実行します。</td></tr>
               <tr><td>黄 · 確認が必要</td><td>一般的な互換性リスクがあります。</td><td>説明と修復プレビューを確認してください。</td></tr>
               <tr><td>赤 · 問題あり</td><td>設定が無効または不完全です。</td><td>安全と明示された修復以外は自動変更しないでください。</td></tr>
               <tr><td>灰 · 未設定</td><td>既知の場所に設定ファイルがありません。</td><td>そのクライアントを使っていなければ正常です。</td></tr>
@@ -670,6 +707,9 @@ mcpulse repair --apply-safe</pre>
               <tr><td><code>mcpulse scan --lang en</code></td><td>英語で出力。</td></tr>
               <tr><td><code>mcpulse scan --lang zh-CN</code></td><td>簡体字中国語で出力。</td></tr>
               <tr><td><code>mcpulse scan --lang ja</code></td><td>日本語で出力。</td></tr>
+              <tr><td><code>mcpulse probe</code></td><td>詳細診断で使うコマンドと接続先を表示します。サーバーは起動しません。</td></tr>
+              <tr><td><code>mcpulse probe --run</code></td><td>実際の MCP 初期化ハンドシェイクを行い、既定 8 秒でタイムアウトして接続を確実に閉じます。</td></tr>
+              <tr><td><code>mcpulse probe --run --server 名前</code></td><td>指定サーバーだけを詳細診断します。</td></tr>
               <tr><td><code>mcpulse repair --plan</code></td><td>書き込まずに修復案を表示。</td></tr>
               <tr><td><code>mcpulse repair --apply-safe</code></td><td>バックアップ後、安全な修復を適用。</td></tr>
             </tbody></table>`
@@ -682,7 +722,8 @@ mcpulse repair --apply-safe</pre>
               <li>レポートはホームパスと一般的な Token 形式を置き換えます。</li>
               <li>バックアップはローカルですが元の秘密を含む場合があり、元設定と同様に保護が必要です。</li>
               <li>発見した MCP サーバーが安全だとは宣言しません。</li>
-              <li>将来のアクティブ診断では、選択したサーバープロセスを起動することを明示します。</li>
+              <li>詳細接続診断は、設定コマンドが第三者コードを実行し <code>npx</code> がパッケージを取得する可能性があるため、必ずプレビューと確認を行います。</li>
+              <li>各診断にはタイムアウトがあり、完了後に子プロセスまたは HTTP 接続を閉じます。</li>
             </ul>
             <div class="callout"><strong>レポート共有前</strong><p>必ず人が最終確認してください。自動匿名化ですべての独自秘密形式を検出できる保証はありません。</p></div>`
           },
@@ -711,6 +752,7 @@ mcpulse repair --apply-safe</pre>
           {
             id: "faq", title: "10. よくある質問", lead: "初めて使う方が疑問に思う項目をまとめています。",
             html: `<details open><summary>「今すぐ診断」でファイルは変更されますか？</summary><p>いいえ。診断は読み取り専用です。修復プレビューを開き、対象の修復を明示的に確認した場合のみ変更されます。</p></details>
+            <details><summary>なぜ「今すぐ診断」だけではサーバーの動作を証明できませんか？</summary><p>通常診断は第三者コードを実行せず、ファイル、構文、コマンド、環境変数参照、URL を確認します。実際にサーバーを起動または接続して MCP ハンドシェイクを行う場合は「詳細接続診断」を使います。</p></details>
             <details><summary>なぜ「未設定」と表示されますか？</summary><p>既知の場所に対応設定がありません。未インストール、または MCP 未設定なら正常です。</p></details>
             <details><summary>Token を作成・復元できますか？</summary><p>できません。必要な環境変数がないことは示せますが、認証は各プロバイダーで行います。</p></details>
             <details><summary>すべて自動修復できますか？</summary><p>できません。安全な修復は決定的な設定変換だけです。リモート障害、権限、企業ポリシー、資格情報、サーバーバグは手動対応です。</p></details>
@@ -753,6 +795,7 @@ mcpulse repair --apply-safe</pre>
     const toc = document.querySelector("#toc");
     const edition = document.querySelector("#edition");
     const sideNote = document.querySelector("#side-note");
+    const printButton = document.querySelector("#print-book");
 
     function normalize(value) {
       const lower = (value || "").toLowerCase();
@@ -768,6 +811,7 @@ mcpulse repair --apply-safe</pre>
       select.value = locale;
       edition.textContent = book.edition;
       sideNote.textContent = book.sideNote;
+      printButton.textContent = book.printLabel;
       toc.innerHTML = book.sections
         .map(section => `<a href="#${section.id}">${section.title}</a>`)
         .join("");
@@ -804,6 +848,7 @@ mcpulse repair --apply-safe</pre>
       render(locale);
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
+    printButton.addEventListener("click", () => window.print());
     render(initial);
   </script>
 </body>

@@ -22,6 +22,63 @@ export interface ServerDefinition {
   command?: string;
   args: string[];
   url?: string;
+  cwd?: string;
+  env?: Record<string, string>;
+  envKeys?: string[];
+  headers?: Record<string, string>;
+  hasHeaders?: boolean;
+}
+
+export type ProbeTransport = "stdio" | "http";
+export type ProbeStatus =
+  | "connected"
+  | "auth-required"
+  | "not-found"
+  | "timeout"
+  | "failed"
+  | "unsupported";
+
+export interface ProbeTarget {
+  clientId: ClientId;
+  clientName: string;
+  configPath: string;
+  server: ServerDefinition;
+}
+
+export interface ProbeResult {
+  clientId: ClientId;
+  clientName: string;
+  configPath: string;
+  serverName: string;
+  transport: ProbeTransport;
+  status: ProbeStatus;
+  durationMs: number;
+  protocolVersion?: string;
+  serverNameReported?: string;
+  serverVersion?: string;
+  toolCount?: number;
+  messageKey: string;
+  detail?: string;
+}
+
+export interface ProbeReport {
+  schemaVersion: 1;
+  generatedAt: string;
+  platform: NodeJS.Platform;
+  results: ProbeResult[];
+  summary: {
+    total: number;
+    connected: number;
+    authRequired: number;
+    failed: number;
+  };
+}
+
+export interface ProbeOptions {
+  timeoutMs?: number;
+  concurrency?: number;
+  scanOptions?: Omit<ScanOptions, "includeSensitive">;
+  serverNames?: string[];
 }
 
 export interface RepairAction {
@@ -92,6 +149,8 @@ export interface ScanOptions {
   appDataDir?: string;
   projectDir?: string;
   candidates?: ConfigCandidate[];
+  includeSensitive?: boolean;
+  skipProjectConfigs?: boolean;
 }
 
 export interface RepairResult {

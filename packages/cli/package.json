@@ -1,7 +1,16 @@
 {
   "name": "@mcpulse/cli",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
+  "description": "Cross-platform MCP configuration diagnostics, live handshake checks, and safe repair.",
+  "license": "Apache-2.0",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "mcpulse": "dist/mcpulse.cjs"
   },
@@ -11,10 +20,8 @@
     "test": "vitest run --passWithNoTests",
     "dev": "node scripts/dev.mjs"
   },
-  "dependencies": {
-    "@mcpulse/core": "workspace:*"
-  },
   "devDependencies": {
+    "@mcpulse/core": "workspace:*",
     "esbuild": "^0.25.5"
   }
 }

@@ -8,8 +8,11 @@ by AI developer tools. It provides both a CLI and a desktop application.
 The first development slice includes:
 
 - local discovery for Codex, Claude Desktop, Cursor, VS Code, Gemini CLI, and OpenCode;
+- platform-correct discovery paths for Windows, macOS, and Linux;
 - English, Simplified Chinese, and Japanese with instant switching;
-- static MCP configuration checks;
+- read-only checks for syntax, commands, environment references, and URLs;
+- opt-in deep connection checks using real MCP initialize handshakes, bounded
+  timeouts, tool-list verification, and connection/process cleanup;
 - safe Windows `npx` repair plans for JSON/JSONC configurations;
 - repair preview, local backup, verification, and rollback records;
 - redacted JSON support reports;
@@ -34,6 +37,8 @@ Run the CLI:
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\dev.ps1 cli -- scan --lang zh-CN
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\dev.ps1 cli -- scan --json
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\dev.ps1 cli -- probe
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\dev.ps1 cli -- probe --run
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\dev.ps1 cli -- repair --plan
 ```
 
@@ -54,9 +59,16 @@ their respective operating systems.
 - No account and no telemetry.
 - No configuration or logs are uploaded.
 - Reports redact common token and secret shapes.
+- The default scan never starts configured third-party commands.
+- Deep checks show a preview and require explicit confirmation because local
+  commands can run third-party code and `npx` can download packages.
+- Deep checks use bounded timeouts and close spawned processes and HTTP sessions.
 - Repairs create a local backup before writing.
 - Only deterministic, low-risk repairs are eligible for one-click repair.
 
 ## License
 
 Apache-2.0. See `LICENSE`.
+
+Direct dependency sources and licenses are documented in
+`THIRD_PARTY_NOTICES.md`.

@@ -14,6 +14,9 @@ describe("offline handbook", () => {
     expect(html).toContain('<option value="en">English</option>');
     expect(html).toContain('<option value="zh-CN">简体中文</option>');
     expect(html).toContain('<option value="ja">日本語</option>');
+    expect(html.match(/mcpulse probe --run/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(html).toContain("深度连接检测");
+    expect(html).toContain("詳細接続診断");
 
     for (const id of [
       "understand",
@@ -40,6 +43,8 @@ describe("offline handbook", () => {
       /<(?:script|link|img)[^>]+(?:src|href)=["']https?:\/\//i
     );
     expect(html).toContain("@media print");
+    expect(html).toContain('id="print-book"');
+    expect(html).toContain("window.print()");
     expect(html).toContain("localStorage");
   });
 });

@@ -49,6 +49,14 @@
               Scan now
             </button>
             <button
+              id="probe-button"
+              class="button secondary"
+              data-i18n="action.deepCheck"
+              disabled
+            >
+              Deep connection check
+            </button>
+            <button
               id="repair-button"
               class="button secondary"
               data-i18n="action.repairSafe"
@@ -78,6 +86,16 @@
           </div>
         </section>
 
+        <section class="workspace-bar">
+          <div>
+            <span data-i18n="workspace.label">Project diagnostics</span>
+            <strong id="workspace-path" data-i18n="workspace.none">No project folder selected</strong>
+          </div>
+          <button id="workspace-button" class="button ghost" data-i18n="action.selectProject">
+            Select project folder
+          </button>
+        </section>
+
         <section class="summary-grid" id="summary-grid" aria-live="polite">
           <article class="summary-card">
             <span data-i18n="summary.clients">AI tools found</span>
@@ -97,6 +115,7 @@
           </article>
         </section>
 
+        <section id="probe-results" class="probe-results" hidden></section>
         <section id="client-list" class="client-list"></section>
       </main>
     </div>
@@ -123,6 +142,27 @@
           data-i18n="action.confirmRepair"
         >
           Back up and repair
+        </button>
+      </div>
+    </dialog>
+
+    <dialog id="probe-dialog">
+      <div class="dialog-header">
+        <div>
+          <span class="eyebrow">MCP HANDSHAKE</span>
+          <h2 data-i18n="probe.previewTitle">Deep connection check</h2>
+        </div>
+        <button class="icon-button" id="probe-dialog-close" aria-label="Close">×</button>
+      </div>
+      <p data-i18n="probe.previewDetail"></p>
+      <div class="safety-callout" data-i18n="probe.safety"></div>
+      <div id="probe-list" class="repair-list"></div>
+      <div class="dialog-actions">
+        <button id="probe-cancel" class="button ghost" data-i18n="action.cancel">
+          Cancel
+        </button>
+        <button id="probe-confirm" class="button primary" data-i18n="probe.start">
+          Start deep check
         </button>
       </div>
     </dialog>

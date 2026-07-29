@@ -1,6 +1,10 @@
 {
   "name": "@mcpulse/desktop",
-  "version": "0.1.1",
+  "version": "0.2.0",
+  "description": "Local MCP diagnostics, live connection checks, and safe repair.",
+  "author": "MCPulse contributors",
+  "license": "Apache-2.0",
+  "desktopName": "MCPulse",
   "private": true,
   "main": "dist/main.cjs",
   "scripts": {
@@ -30,6 +34,16 @@
       "dist/**/*",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "../../LICENSE",
+        "to": "LICENSE"
+      },
+      {
+        "from": "../../THIRD_PARTY_NOTICES.md",
+        "to": "THIRD_PARTY_NOTICES.md"
+      }
+    ],
     "asar": true,
     "win": {
       "target": [
@@ -50,6 +64,8 @@
       "artifactName": "MCPulse-${version}-macOS-${arch}.${ext}"
     },
     "linux": {
+      "executableName": "mcpulse",
+      "syncDesktopName": true,
       "target": [
         "AppImage",
         "tar.gz"

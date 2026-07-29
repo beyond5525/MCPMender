@@ -4,6 +4,8 @@ import path from "node:path";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import {
   applySafeRepairs,
+  planProbeTargets,
+  probeMcpConfigurations,
   redactReport,
   scanMcpConfigurations,
   type RepairAction
@@ -11,6 +13,17 @@ import {
 
 let mainWindow: BrowserWindow | undefined;
 let helpWindow: BrowserWindow | undefined;
+let selectedProjectDir: string | undefined;
+
+function desktopScanOptions(): {
+  projectDir?: string;
+  skipProjectConfigs: boolean;
+} {
+  return {
+    projectDir: selectedProjectDir,
+    skipProjectConfigs: !selectedProjectDir
+  };
+}
 
 function openHelpWindow(): void {
   if (helpWindow && !helpWindow.isDestroyed()) {
@@ -81,7 +94,33 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  ipcMain.handle("mcpulse:scan", () => scanMcpConfigurations());
+  ipcMain.handle("mcpulse:scan", () =>
+    scanMcpConfigurations(desktopScanOptions())
+  );
+  ipcMain.handle("mcpulse:select-project", async () => {
+    const result = await dialog.showOpenDialog({
+      title: "Select a project folder",
+      properties: ["openDirectory"]
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return { path: selectedProjectDir };
+    }
+    selectedProjectDir = result.filePaths[0];
+    return {
+      path: selectedProjectDir,
+      report: await scanMcpConfigurations(desktopScanOptions())
+    };
+  });
+  ipcMain.handle("mcpulse:probe-plan", () =>
+    planProbeTargets(desktopScanOptions())
+  );
+  ipcMain.handle("mcpulse:probe-run", () =>
+    probeMcpConfigurations({
+      timeoutMs: 8_000,
+      concurrency: 2,
+      scanOptions: desktopScanOptions()
+    })
+  );
   ipcMain.handle(
     "mcpulse:repair-safe",
     (_event, repairs: RepairAction[]) => applySafeRepairs(repairs)

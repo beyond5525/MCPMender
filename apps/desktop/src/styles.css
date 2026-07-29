@@ -250,6 +250,40 @@ main {
   margin: 38px 0 22px;
 }
 
+.workspace-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding: 12px 15px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(10, 25, 43, 0.68);
+}
+
+.workspace-bar span,
+.workspace-bar strong {
+  display: block;
+}
+
+.workspace-bar span {
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.workspace-bar strong {
+  max-width: 760px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .summary-card,
 .client-card {
   border: 1px solid var(--line);
@@ -424,6 +458,71 @@ dialog::backdrop {
   background: rgba(255, 255, 255, 0.025);
 }
 
+.safety-callout {
+  margin: 14px 0;
+  padding: 12px 14px;
+  color: #f8d892;
+  border: 1px solid rgba(246, 198, 109, 0.25);
+  border-radius: 10px;
+  background: rgba(246, 198, 109, 0.08);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.probe-results {
+  margin-bottom: 22px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(14, 30, 51, 0.82);
+}
+
+.probe-results h2 {
+  margin: 0 0 14px;
+  font-size: 17px;
+}
+
+.probe-result-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.probe-result {
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.probe-result.connected {
+  border-color: rgba(89, 227, 206, 0.28);
+}
+
+.probe-result.failed,
+.probe-result.timeout,
+.probe-result.not-found {
+  border-color: rgba(248, 113, 113, 0.28);
+}
+
+.probe-result strong,
+.probe-result span,
+.probe-result small {
+  display: block;
+}
+
+.probe-result span {
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.probe-result small {
+  margin-top: 4px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .repair-item strong {
   display: block;
   margin-bottom: 10px;
@@ -469,4 +568,6 @@ dialog::backdrop {
   .summary-grid { grid-template-columns: repeat(2, 1fr); }
   .client-card { grid-template-columns: 1fr 1fr; }
   .client-findings { grid-column: 1 / -1; }
+  .probe-result-grid { grid-template-columns: 1fr; }
+  .workspace-bar { align-items: flex-start; }
 }

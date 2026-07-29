@@ -1,5 +1,3 @@
-import type { ScanReport } from "./types.js";
-
 const SECRET_KEY_PATTERN =
   /(["']?(?:token|secret|password|api[_-]?key|authorization)["']?\s*[:=]\s*["']?)([^"',\s}]+)/gi;
 
@@ -22,7 +20,7 @@ export function redactText(value: string, homeDir?: string): string {
   return result;
 }
 
-export function redactReport(report: ScanReport, homeDir?: string): ScanReport {
+export function redactReport<T>(report: T, homeDir?: string): T {
   function walk(value: unknown): unknown {
     if (typeof value === "string") return redactText(value, homeDir);
     if (Array.isArray(value)) return value.map(walk);
@@ -34,5 +32,5 @@ export function redactReport(report: ScanReport, homeDir?: string): ScanReport {
     return value;
   }
 
-  return walk(report) as ScanReport;
+  return walk(report) as T;
 }
