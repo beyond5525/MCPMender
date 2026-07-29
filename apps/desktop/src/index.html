@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;"
+    />
+    <title>MCPulse</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </span>
+          <div>
+            <strong data-i18n="app.name">MCPulse</strong>
+            <small data-i18n="app.tagline">Local MCP diagnostics and safe repair</small>
+          </div>
+        </div>
+        <label class="language-control">
+          <span data-i18n="language.label">Language</span>
+          <select id="language-select">
+            <option value="en">English</option>
+            <option value="zh-CN">简体中文</option>
+            <option value="ja">日本語</option>
+          </select>
+        </label>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div>
+            <span class="eyebrow">MCP CONNECTION CENTER</span>
+            <h1 data-i18n="app.tagline">Local MCP diagnostics and safe repair</h1>
+            <p data-i18n="privacy.localOnly">
+              Local only · no telemetry · secrets redacted
+            </p>
+          </div>
+          <div class="hero-actions">
+            <button id="scan-button" class="button primary" data-i18n="action.scan">
+              Scan now
+            </button>
+            <button
+              id="repair-button"
+              class="button secondary"
+              data-i18n="action.repairSafe"
+              disabled
+            >
+              Repair safe issues
+            </button>
+            <button
+              id="export-button"
+              class="button ghost"
+              data-i18n="action.export"
+              disabled
+            >
+              Export redacted report
+            </button>
+            <button
+              id="help-button"
+              class="button ghost"
+              data-i18n="action.help"
+            >
+              Tutorial & help
+            </button>
+          </div>
+        </section>
+
+        <section class="summary-grid" id="summary-grid" aria-live="polite">
+          <article class="summary-card">
+            <span data-i18n="summary.clients">AI tools found</span>
+            <strong id="summary-clients">—</strong>
+          </article>
+          <article class="summary-card">
+            <span data-i18n="summary.servers">Configured MCP servers</span>
+            <strong id="summary-servers">—</strong>
+          </article>
+          <article class="summary-card">
+            <span data-i18n="summary.problems">Problems</span>
+            <strong id="summary-problems">—</strong>
+          </article>
+          <article class="summary-card accent">
+            <span data-i18n="summary.safeRepairs">Safe repairs</span>
+            <strong id="summary-repairs">—</strong>
+          </article>
+        </section>
+
+        <section id="client-list" class="client-list"></section>
+      </main>
+    </div>
+
+    <dialog id="repair-dialog">
+      <div class="dialog-header">
+        <div>
+          <span class="eyebrow">SAFE REPAIR</span>
+          <h2 data-i18n="repair.previewTitle">Repair preview</h2>
+        </div>
+        <button class="icon-button" id="dialog-close" aria-label="Close">×</button>
+      </div>
+      <p data-i18n="repair.previewDetail">
+        MCPulse will back up the original configuration before applying these low-risk changes.
+      </p>
+      <div id="repair-list" class="repair-list"></div>
+      <div class="dialog-actions">
+        <button id="dialog-cancel" class="button ghost" data-i18n="action.cancel">
+          Cancel
+        </button>
+        <button
+          id="dialog-confirm"
+          class="button primary"
+          data-i18n="action.confirmRepair"
+        >
+          Back up and repair
+        </button>
+      </div>
+    </dialog>
+
+    <div id="toast" class="toast" role="status"></div>
+    <script src="./renderer.js"></script>
+  </body>
+</html>

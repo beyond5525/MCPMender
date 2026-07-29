@@ -1,0 +1,23 @@
+{
+  "name": "mcpulse",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local MCP diagnostics and safe repair for AI developer tools.",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.8.1",
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm --filter @mcpulse/core build && pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "cli": "pnpm --filter @mcpulse/cli dev",
+    "desktop": "pnpm --filter @mcpulse/desktop dev",
+    "desktop:dist": "pnpm --filter @mcpulse/desktop dist",
+    "desktop:dist:mac": "pnpm --filter @mcpulse/desktop dist:mac",
+    "desktop:dist:linux": "pnpm --filter @mcpulse/desktop dist:linux"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

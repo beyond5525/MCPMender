@@ -1,0 +1,61 @@
+{
+  "name": "@mcpulse/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "dev": "pnpm build && electron .",
+    "dist": "pnpm build && electron-builder --win portable",
+    "dist:mac": "pnpm build && electron-builder --mac dmg zip",
+    "dist:linux": "pnpm build && electron-builder --linux AppImage tar.gz"
+  },
+  "dependencies": {
+    "@mcpulse/core": "workspace:*"
+  },
+  "devDependencies": {
+    "electron": "^37.1.0",
+    "electron-builder": "^26.0.12",
+    "esbuild": "^0.25.5"
+  },
+  "build": {
+    "appId": "org.mcpulse.desktop",
+    "productName": "MCPulse",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "MCPulse-${version}-Windows-${arch}.${ext}"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "artifactName": "MCPulse-${version}-macOS-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "category": "Development",
+      "artifactName": "MCPulse-${version}-Linux-${arch}.${ext}"
+    }
+  }
+}

@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MCPulse Handbook</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08111e;
+      --panel: #101f35;
+      --panel-2: #142842;
+      --line: rgba(161, 195, 235, .16);
+      --text: #edf6ff;
+      --muted: #91a9c5;
+      --accent: #59e3ce;
+      --blue: #70a9ff;
+      --amber: #f6c66d;
+      font-family: Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei",
+        "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 0, rgba(36, 117, 179, .25), transparent 28rem),
+        radial-gradient(circle at 90% 8%, rgba(52, 212, 183, .12), transparent 24rem),
+        var(--bg);
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, pre { font-family: "Cascadia Code", Consolas, monospace; }
+    .layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 880px);
+      width: min(1240px, calc(100% - 48px));
+      margin: 0 auto;
+      gap: 42px;
+    }
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 34px 0;
+      overflow: auto;
+      border-right: 1px solid var(--line);
+    }
+    main { padding: 54px 0 100px; }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .logo {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border: 1px solid rgba(89, 227, 206, .35);
+      border-radius: 13px;
+      background: rgba(89, 227, 206, .1);
+      color: var(--accent);
+      font-weight: 900;
+      box-shadow: 0 0 30px rgba(89, 227, 206, .12);
+    }
+    .brand strong, .brand small { display: block; }
+    .brand small { margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .language {
+      width: calc(100% - 28px);
+      margin-bottom: 26px;
+      padding: 10px 12px;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--panel);
+    }
+    nav { padding-right: 28px; }
+    nav a {
+      display: block;
+      padding: 9px 11px;
+      color: var(--muted);
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    nav a:hover, nav a.active {
+      color: var(--text);
+      background: rgba(112, 169, 255, .1);
+      text-decoration: none;
+    }
+    .side-note {
+      margin: 26px 28px 0 0;
+      padding: 14px;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 11px;
+      line-height: 1.55;
+      background: rgba(255, 255, 255, .02);
+    }
+    .hero {
+      padding: 38px;
+      border: 1px solid rgba(89, 227, 206, .2);
+      border-radius: 22px;
+      background: linear-gradient(145deg, rgba(21, 48, 72, .88), rgba(12, 26, 45, .74));
+      box-shadow: 0 30px 90px rgba(0, 0, 0, .22);
+    }
+    .eyebrow {
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .18em;
+    }
+    h1 {
+      max-width: 720px;
+      margin: 12px 0;
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 1.03;
+      letter-spacing: -.045em;
+    }
+    .hero p {
+      max-width: 720px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 24px;
+    }
+    .pill {
+      padding: 7px 10px;
+      color: var(--accent);
+      border: 1px solid rgba(89, 227, 206, .18);
+      border-radius: 999px;
+      background: rgba(89, 227, 206, .06);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    section {
+      padding-top: 64px;
+      scroll-margin-top: 24px;
+    }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 28px;
+      letter-spacing: -.025em;
+    }
+    h3 { margin: 30px 0 10px; color: #dceaff; font-size: 17px; }
+    p, li { color: #c5d5e8; line-height: 1.75; }
+    li + li { margin-top: 7px; }
+    .lead { color: var(--muted); font-size: 15px; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .card, .callout, details {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(145deg, rgba(20, 40, 67, .8), rgba(12, 27, 47, .7));
+    }
+    .card { padding: 19px; }
+    .card strong { display: block; margin-bottom: 7px; }
+    .card p { margin: 0; color: var(--muted); font-size: 13px; }
+    .steps {
+      margin: 22px 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: steps;
+    }
+    .steps li {
+      position: relative;
+      min-height: 46px;
+      padding: 4px 0 22px 54px;
+      counter-increment: steps;
+    }
+    .steps li::before {
+      position: absolute;
+      left: 0;
+      top: 0;
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      content: counter(steps);
+      color: #06231f;
+      border-radius: 10px;
+      background: var(--accent);
+      font-weight: 900;
+    }
+    pre {
+      margin: 15px 0;
+      padding: 18px;
+      overflow: auto;
+      color: #d8f7f1;
+      border: 1px solid rgba(89, 227, 206, .16);
+      border-radius: 12px;
+      background: #07101b;
+      line-height: 1.6;
+    }
+    .callout {
+      margin: 20px 0;
+      padding: 18px 20px;
+      border-left: 3px solid var(--accent);
+    }
+    .callout.warning { border-left-color: var(--amber); }
+    .callout strong { display: block; margin-bottom: 5px; }
+    .callout p { margin: 0; color: var(--muted); }
+    table {
+      width: 100%;
+      margin: 18px 0;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    th, td {
+      padding: 13px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th { color: var(--muted); background: rgba(255, 255, 255, .025); font-size: 12px; }
+    td { color: #c9d9eb; font-size: 13px; }
+    details { margin: 10px 0; padding: 0 17px; }
+    summary { padding: 16px 0; cursor: pointer; font-weight: 700; }
+    details p { margin-top: 0; color: var(--muted); }
+    footer {
+      margin-top: 80px;
+      padding-top: 24px;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      font-size: 12px;
+    }
+    @media (max-width: 860px) {
+      .layout { display: block; width: min(100% - 28px, 760px); }
+      aside {
+        position: relative;
+        height: auto;
+        padding-bottom: 18px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      nav { display: none; }
+      .language { width: 100%; }
+      .side-note { margin-right: 0; }
+      main { padding-top: 28px; }
+      .cards { grid-template-columns: 1fr; }
+      .hero { padding: 26px; }
+    }
+    @media print {
+      :root { color-scheme: light; }
+      body { color: #111; background: #fff; }
+      aside { display: none; }
+      .layout { display: block; width: 100%; }
+      main { padding: 0; }
+      .hero, .card, .callout, details { color: #111; background: #fff; box-shadow: none; }
+      p, li, td, .lead, .hero p, .card p, .callout p, details p { color: #333; }
+      section { break-inside: avoid; }
+      pre { color: #111; background: #f5f5f5; white-space: pre-wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand">
+        <span class="logo">M</span>
+        <div><strong>MCPulse</strong><small id="edition"></small></div>
+      </div>
+      <select id="language" class="language" aria-label="Language">
+        <option value="en">English</option>
+        <option value="zh-CN">简体中文</option>
+        <option value="ja">日本語</option>
+      </select>
+      <nav id="toc"></nav>
+      <div class="side-note" id="side-note"></div>
+    </aside>
+    <main id="content"></main>
+  </div>
+  <script>
+    const handbook = {
+      en: {
+        edition: "Offline Handbook · v0.1",
+        sideNote: "This handbook is included with MCPulse and works completely offline. Use your browser’s Print command to save the current language as PDF.",
+        hero: {
+          eyebrow: "GET STARTED WITH CONFIDENCE",
+          title: "Understand, diagnose, and safely repair MCP connections",
+          text: "MCPulse helps Codex, Claude, Cursor, VS Code, Gemini CLI, and OpenCode connect to local and remote MCP tools. This guide explains every important workflow without assuming prior MCP knowledge.",
+          pills: ["Windows · macOS · Linux", "CLI + Desktop", "Local only", "English · 中文 · 日本語"]
+        },
+        sections: [
+          {
+            id: "understand", title: "1. What MCPulse does", lead: "Think of MCP as a plug that lets an AI developer tool use GitHub, browsers, databases, and local utilities. MCPulse is the connection doctor for that plug.",
+            html: `<div class="cards">
+              <div class="card"><strong>Discover</strong><p>Find installed AI tool configurations without creating or changing them.</p></div>
+              <div class="card"><strong>Diagnose</strong><p>Explain path, command, environment, syntax, and connection problems in plain language.</p></div>
+              <div class="card"><strong>Repair safely</strong><p>Preview deterministic low-risk fixes, back up the original, apply, and verify.</p></div>
+              <div class="card"><strong>Share evidence</strong><p>Export a redacted report for maintainers or support without exposing common secrets.</p></div>
+            </div>
+            <div class="callout"><strong>What MCPulse is not</strong><p>It is not an AI chat client, an MCP marketplace, or a background cloud service. It runs locally when you ask it to.</p></div>`
+          },
+          {
+            id: "quick-start", title: "2. Five-minute quick start", lead: "The Desktop is the easiest route. The CLI offers the same core behavior for terminal users and automation.",
+            html: `<h3>Desktop</h3><ol class="steps">
+              <li>Download the package for your operating system and open MCPulse.</li>
+              <li>Choose your language in the top-right corner. The choice is remembered.</li>
+              <li>Select <strong>Scan now</strong>. The default scan is read-only.</li>
+              <li>Review each client card and its green, yellow, or red result.</li>
+              <li>If safe repairs are available, open the preview and confirm only after reviewing the before/after command.</li>
+            </ol>
+            <h3>CLI</h3><pre>mcpulse scan
+mcpulse scan --lang zh-CN
+mcpulse scan --lang ja
+mcpulse scan --json</pre>`
+          },
+          {
+            id: "desktop", title: "3. Desktop interface", lead: "The dashboard keeps diagnosis understandable even if you do not normally use a terminal.",
+            html: `<table><thead><tr><th>Area</th><th>Purpose</th></tr></thead><tbody>
+              <tr><td>Summary cards</td><td>Show detected clients, configured servers, problems, and safe repairs.</td></tr>
+              <tr><td>Client cards</td><td>Show the exact configuration path, server count, status, and findings for each supported AI tool.</td></tr>
+              <tr><td>Scan now</td><td>Repeats a read-only discovery and static validation pass.</td></tr>
+              <tr><td>Repair safe issues</td><td>Opens a before/after preview. It does not write immediately.</td></tr>
+              <tr><td>Export report</td><td>Creates a structured JSON report with home paths and common token patterns redacted.</td></tr>
+              <tr><td>Tutorial & help</td><td>Opens this offline handbook in your default browser.</td></tr>
+            </tbody></table>`
+          },
+          {
+            id: "statuses", title: "4. Reading scan results", lead: "A color is a decision aid, not a security verdict.",
+            html: `<table><thead><tr><th>Status</th><th>Meaning</th><th>What to do</th></tr></thead><tbody>
+              <tr><td>Green · Healthy</td><td>No known problem was found by the checks that ran.</td><td>No action is required. A future protocol probe may still reveal server-specific problems.</td></tr>
+              <tr><td>Yellow · Needs attention</td><td>A common compatibility risk was found.</td><td>Read the explanation and preview any offered fix.</td></tr>
+              <tr><td>Red · Problem found</td><td>The configuration is invalid or incomplete.</td><td>Do not force an automatic repair unless MCPulse explicitly marks one safe.</td></tr>
+              <tr><td>Gray · Not configured</td><td>No supported configuration file was found at the checked path.</td><td>This is normal if you do not use that client.</td></tr>
+            </tbody></table>
+            <div class="callout warning"><strong>Important</strong><p>“Healthy” means the performed checks passed. It does not prove that a third-party server is trustworthy or that an account is authorized.</p></div>`
+          },
+          {
+            id: "repair", title: "5. One-click repair, backup, and rollback", lead: "One-click repair is deliberately limited to deterministic changes with a clear expected result.",
+            html: `<ol class="steps">
+              <li>MCPulse scans the file and records its content hash.</li>
+              <li>You see the exact command before and after the proposed repair.</li>
+              <li>When confirmed, MCPulse checks that the file did not change after the scan.</li>
+              <li>The original file is copied into a local transaction backup.</li>
+              <li>The change is applied and the resulting syntax is validated.</li>
+              <li>If validation fails, the original is restored.</li>
+            </ol>
+            <h3>CLI repair commands</h3><pre>mcpulse repair --plan
+mcpulse repair --apply-safe</pre>
+            <div class="callout warning"><strong>Never treat “one click” as “blind trust”</strong><p>Credentials, enterprise policy, firewall changes, remote outages, and unknown server behavior require user or administrator decisions and should not be auto-fixed.</p></div>`
+          },
+          {
+            id: "cli", title: "6. Command-line reference", lead: "The CLI is useful on developer machines, remote systems, CI, and support sessions.",
+            html: `<table><thead><tr><th>Command</th><th>Result</th></tr></thead><tbody>
+              <tr><td><code>mcpulse scan</code></td><td>Human-readable local scan.</td></tr>
+              <tr><td><code>mcpulse scan --json</code></td><td>Machine-readable, redacted report.</td></tr>
+              <tr><td><code>mcpulse scan --lang en</code></td><td>English output.</td></tr>
+              <tr><td><code>mcpulse scan --lang zh-CN</code></td><td>Simplified Chinese output.</td></tr>
+              <tr><td><code>mcpulse scan --lang ja</code></td><td>Japanese output.</td></tr>
+              <tr><td><code>mcpulse repair --plan</code></td><td>Show safe repair proposals without writing.</td></tr>
+              <tr><td><code>mcpulse repair --apply-safe</code></td><td>Back up and apply eligible safe repairs.</td></tr>
+            </tbody></table>`
+          },
+          {
+            id: "privacy", title: "7. Privacy and security", lead: "MCP configurations may contain sensitive paths and credentials. MCPulse is designed to minimize unnecessary exposure.",
+            html: `<ul>
+              <li>No account, telemetry, or MCPulse cloud service is required.</li>
+              <li>The default scan reads known configuration locations locally.</li>
+              <li>Exported reports replace the user home path and common token shapes.</li>
+              <li>Backups remain local and may still contain original secrets; protect them like the source configuration.</li>
+              <li>MCPulse does not claim that a discovered MCP server is safe.</li>
+              <li>A future active probe must clearly state that it will start the selected server process.</li>
+            </ul>
+            <div class="callout"><strong>Before sharing a report</strong><p>Open it and perform a final human review. No automated redactor can guarantee detection of every custom secret format.</p></div>`
+          },
+          {
+            id: "platforms", title: "8. Windows, macOS, Linux, and WSL", lead: "The core concepts are shared, but process launching and configuration paths differ.",
+            html: `<table><thead><tr><th>Platform</th><th>Common concern</th></tr></thead><tbody>
+              <tr><td>Windows</td><td><code>npx.cmd</code> and other command wrappers may require <code>cmd /c</code>; quoting and spaces in paths matter.</td></tr>
+              <tr><td>macOS</td><td>GUI applications may inherit a different PATH than Terminal; downloaded binaries may be subject to Gatekeeper.</td></tr>
+              <tr><td>Linux</td><td>Executable permissions, distribution paths, and missing shared libraries are common causes.</td></tr>
+              <tr><td>WSL</td><td>Do not mix a Windows executable with a Linux path, or a Linux executable with an unconverted Windows path.</td></tr>
+            </tbody></table>`
+          },
+          {
+            id: "reports", title: "9. Reports and asking for help", lead: "A useful support report describes what was checked, what failed, and what changed—without casually exposing secrets.",
+            html: `<h3>Include</h3><ul>
+              <li>MCPulse version, operating system, and affected client.</li>
+              <li>The redacted JSON report.</li>
+              <li>The exact user-visible error and whether the server works in another client.</li>
+              <li>Whether the problem started after a client, runtime, or server update.</li>
+            </ul>
+            <h3>Do not include</h3><ul>
+              <li>Unredacted API keys, OAuth tokens, cookies, passwords, or private repository URLs.</li>
+              <li>A complete private configuration unless the recipient is authorized and the transfer method is secure.</li>
+            </ul>`
+          },
+          {
+            id: "faq", title: "10. Frequently asked questions", lead: "Quick answers to the questions most users encounter first.",
+            html: `<details open><summary>Does MCPulse modify my files during Scan?</summary><p>No. Scan is read-only. A file is changed only after you open a repair preview and explicitly confirm an eligible repair.</p></details>
+            <details><summary>Why is a client shown as Not configured?</summary><p>MCPulse did not find a supported configuration file at its known location. This is normal when the client is not installed or has never configured MCP.</p></details>
+            <details><summary>Can MCPulse create or recover my token?</summary><p>No. It can identify that a required environment variable is absent, but authentication remains with the relevant provider.</p></details>
+            <details><summary>Can every problem be repaired automatically?</summary><p>No. Safe repair is reserved for deterministic configuration transformations. Remote outages, permissions, enterprise policies, credentials, and server bugs require manual action.</p></details>
+            <details><summary>Why did a repair get skipped?</summary><p>The configuration may have changed after scanning. MCPulse uses a content hash to avoid overwriting newer user or application changes.</p></details>
+            <details><summary>Can I use the CLI and Desktop together?</summary><p>Yes. They use the same core scan and repair model. Re-scan after changes made by either interface.</p></details>
+            <details><summary>Does MCPulse run in the background?</summary><p>No background service is required for normal use. The program runs when opened or invoked.</p></details>
+            <details><summary>Can I print this handbook?</summary><p>Yes. Switch to the desired language and use your browser’s Print or Save as PDF command.</p></details>`
+          },
+          {
+            id: "habits", title: "11. Recommended habits", lead: "Small habits keep MCP configurations easier to understand and recover.",
+            html: `<ul>
+              <li>Keep tokens in environment variables or the client’s approved credential flow instead of hard-coding them.</li>
+              <li>Scan after changing Node, Python, uv, client versions, or moving a project.</li>
+              <li>Review a repair preview even when it is marked safe.</li>
+              <li>Keep backups until the repaired server has worked in a real session.</li>
+              <li>Test one failing server at a time so the diagnosis stays bounded.</li>
+              <li>Update MCPulse before filing a compatibility report.</li>
+            </ul>`
+          },
+          {
+            id: "glossary", title: "12. Plain-language glossary", lead: "A few terms make MCP troubleshooting much easier.",
+            html: `<table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody>
+              <tr><td>MCP</td><td>A protocol that lets an AI host communicate with external tool servers.</td></tr>
+              <tr><td>Host/client</td><td>The AI application that starts or connects to MCP servers, such as Codex or Cursor.</td></tr>
+              <tr><td>MCP server</td><td>A local process or remote endpoint that exposes tools, resources, or prompts.</td></tr>
+              <tr><td>stdio</td><td>A local transport that exchanges protocol messages through a child process’s input and output.</td></tr>
+              <tr><td>HTTP transport</td><td>A network connection to an MCP endpoint.</td></tr>
+              <tr><td>Handshake</td><td>The initial exchange that confirms compatible protocol versions and capabilities.</td></tr>
+              <tr><td>Redaction</td><td>Replacing sensitive-looking values before a report is shared.</td></tr>
+              <tr><td>Rollback</td><td>Restoring the configuration from a backup created before repair.</td></tr>
+            </tbody></table>`
+          }
+        ],
+        footer: "MCPulse Offline Handbook · Pre-release documentation. Features may change before v1.0."
+      },
+      "zh-CN": {
+        edition: "离线使用手册 · v0.1",
+        sideNote: "本手册随 MCPulse 一起提供，可完全离线使用。使用浏览器的“打印”功能，可以把当前语言保存为 PDF。",
+        hero: {
+          eyebrow: "放心开始使用",
+          title: "看懂、检测并安全修复 MCP 连接",
+          text: "MCPulse 帮助 Codex、Claude、Cursor、VS Code、Gemini CLI 和 OpenCode 连接本地或远程 MCP 工具。本手册不要求你提前了解 MCP，会从第一次打开软件开始讲清楚所有重要操作。",
+          pills: ["Windows · macOS · Linux", "命令行 + Desktop", "完全本地", "中文 · English · 日本語"]
+        },
+        sections: [
+          {
+            id: "understand", title: "1. MCPulse 是做什么的", lead: "可以把 MCP 理解成让 AI 开发工具连接 GitHub、浏览器、数据库和本地程序的“插头”。MCPulse 就是这个插头的连接诊断与修复工具。",
+            html: `<div class="cards">
+              <div class="card"><strong>自动发现</strong><p>寻找 AI 工具的本地配置，不会因为没找到而擅自创建或修改。</p></div>
+              <div class="card"><strong>通俗诊断</strong><p>用容易理解的语言说明路径、命令、环境变量、语法和连接问题。</p></div>
+              <div class="card"><strong>安全修复</strong><p>先展示确定性的低风险修改，再备份原文件、执行并验证。</p></div>
+              <div class="card"><strong>提供证据</strong><p>导出自动脱敏的报告，方便向维护者或技术支持求助。</p></div>
+            </div>
+            <div class="callout"><strong>MCPulse 不是什么</strong><p>它不是新的 AI 聊天客户端，不是 MCP 应用商店，也不是后台云服务。只有在用户打开或执行命令时才会本地运行。</p></div>`
+          },
+          {
+            id: "quick-start", title: "2. 五分钟快速上手", lead: "Desktop 最适合普通用户；命令行提供相同核心能力，适合开发者和自动化环境。",
+            html: `<h3>Desktop 图形界面</h3><ol class="steps">
+              <li>下载适合自己操作系统的安装包或便携版，然后打开 MCPulse。</li>
+              <li>在右上角选择语言。软件会记住你的选择。</li>
+              <li>点击<strong>立即检测</strong>。默认检测只读取，不修改任何配置。</li>
+              <li>查看每个客户端卡片上的绿色、黄色或红色结果。</li>
+              <li>如果存在可安全修复的问题，先查看修改前后内容，确认无误后再执行。</li>
+            </ol>
+            <h3>命令行</h3><pre>mcpulse scan
+mcpulse scan --lang zh-CN
+mcpulse scan --lang ja
+mcpulse scan --json</pre>`
+          },
+          {
+            id: "desktop", title: "3. Desktop 界面说明", lead: "即使不习惯命令行，也可以通过仪表盘完成检测、查看结果和安全修复。",
+            html: `<table><thead><tr><th>区域</th><th>作用</th></tr></thead><tbody>
+              <tr><td>顶部统计卡</td><td>显示已发现客户端、MCP 服务数量、问题数量和可安全修复数量。</td></tr>
+              <tr><td>客户端卡片</td><td>显示配置路径、服务数量、状态和每一条检查结果。</td></tr>
+              <tr><td>立即检测</td><td>重新执行只读发现和静态配置检查。</td></tr>
+              <tr><td>一键修复安全问题</td><td>先打开修改预览，不会点击后立即写入。</td></tr>
+              <tr><td>导出脱敏报告</td><td>生成结构化 JSON，并隐藏用户主目录和常见 Token。</td></tr>
+              <tr><td>教程与帮助</td><td>使用默认浏览器打开这份离线手册。</td></tr>
+            </tbody></table>`
+          },
+          {
+            id: "statuses", title: "4. 怎么看检测结果", lead: "颜色用于帮助决定下一步，不代表对第三方程序作出了完整的安全认证。",
+            html: `<table><thead><tr><th>状态</th><th>含义</th><th>应该怎么做</th></tr></thead><tbody>
+              <tr><td>绿色 · 正常</td><td>已经执行的检查没有发现已知问题。</td><td>通常不需要操作；以后增加的真实协议检测仍可能发现服务自身问题。</td></tr>
+              <tr><td>黄色 · 需要关注</td><td>发现常见兼容性风险。</td><td>阅读解释，并查看可能提供的修复方案。</td></tr>
+              <tr><td>红色 · 发现问题</td><td>配置无效或不完整。</td><td>除非明确标记为安全修复，否则不要强行自动修改。</td></tr>
+              <tr><td>灰色 · 尚未配置</td><td>在已知位置没有找到配置文件。</td><td>如果你没有使用该客户端，这是正常情况。</td></tr>
+            </tbody></table>
+            <div class="callout warning"><strong>请注意</strong><p>“正常”只表示已经执行的检查通过，不代表第三方 MCP 一定可信，也不代表账号已经完成授权。</p></div>`
+          },
+          {
+            id: "repair", title: "5. 一键修复、备份与撤销", lead: "一键修复只用于结果明确、能够验证的低风险配置修改。",
+            html: `<ol class="steps">
+              <li>MCPulse 读取配置并记录内容哈希。</li>
+              <li>用户先看到建议修改前后的完整命令。</li>
+              <li>确认后再次检查文件是否在检测后被其他程序修改。</li>
+              <li>把原文件复制到本地事务备份目录。</li>
+              <li>应用修改并重新验证配置语法。</li>
+              <li>如果验证失败，恢复原配置。</li>
+            </ol>
+            <h3>命令行修复</h3><pre>mcpulse repair --plan
+mcpulse repair --apply-safe</pre>
+            <div class="callout warning"><strong>“一键”不等于“盲目信任”</strong><p>账号凭据、企业策略、防火墙、远程服务宕机和未知服务行为需要用户或管理员作出决定，不应该自动修改。</p></div>`
+          },
+          {
+            id: "cli", title: "6. 命令行使用说明", lead: "命令行适合开发电脑、远程系统、自动化检查和技术支持场景。",
+            html: `<table><thead><tr><th>命令</th><th>结果</th></tr></thead><tbody>
+              <tr><td><code>mcpulse scan</code></td><td>输出适合阅读的本地检测结果。</td></tr>
+              <tr><td><code>mcpulse scan --json</code></td><td>输出机器可读的脱敏报告。</td></tr>
+              <tr><td><code>mcpulse scan --lang en</code></td><td>使用英文输出。</td></tr>
+              <tr><td><code>mcpulse scan --lang zh-CN</code></td><td>使用简体中文输出。</td></tr>
+              <tr><td><code>mcpulse scan --lang ja</code></td><td>使用日语输出。</td></tr>
+              <tr><td><code>mcpulse repair --plan</code></td><td>只显示安全修复方案，不写入配置。</td></tr>
+              <tr><td><code>mcpulse repair --apply-safe</code></td><td>备份并应用符合条件的安全修复。</td></tr>
+            </tbody></table>`
+          },
+          {
+            id: "privacy", title: "7. 隐私与安全", lead: "MCP 配置可能包含敏感路径和凭据，因此 MCPulse 尽量减少不必要的数据暴露。",
+            html: `<ul>
+              <li>不需要账号，不包含遥测，也不依赖 MCPulse 云服务。</li>
+              <li>默认检测只在本地读取已知配置位置。</li>
+              <li>导出报告会隐藏用户主目录和常见 Token 形式。</li>
+              <li>备份保存在本地，但它仍可能包含原配置中的秘密，应像保护原配置一样保护备份。</li>
+              <li>MCPulse 不会因为发现一个 MCP 就宣称它安全可信。</li>
+              <li>将来的主动协议检测必须明确提示用户会启动被选择的服务进程。</li>
+            </ul>
+            <div class="callout"><strong>分享报告之前</strong><p>请打开报告进行最后一次人工检查。任何自动脱敏工具都无法保证识别所有自定义秘密格式。</p></div>`
+          },
+          {
+            id: "platforms", title: "8. Windows、macOS、Linux 与 WSL", lead: "核心原理相同，但不同系统的进程启动和配置路径存在差异。",
+            html: `<table><thead><tr><th>平台</th><th>常见问题</th></tr></thead><tbody>
+              <tr><td>Windows</td><td><code>npx.cmd</code> 等命令可能需要 <code>cmd /c</code>；带空格路径和引号规则很重要。</td></tr>
+              <tr><td>macOS</td><td>图形软件取得的 PATH 可能与终端不同；下载的程序还可能受到 Gatekeeper 限制。</td></tr>
+              <tr><td>Linux</td><td>可执行权限、不同发行版路径和缺失动态库比较常见。</td></tr>
+              <tr><td>WSL</td><td>不要让 Windows 程序直接使用 Linux 路径，也不要让 Linux 程序使用未转换的 Windows 路径。</td></tr>
+            </tbody></table>`
+          },
+          {
+            id: "reports", title: "9. 导出报告与寻求帮助", lead: "一份有用的报告应该说明检查内容、失败位置和修改情况，同时避免泄露秘密。",
+            html: `<h3>建议提供</h3><ul>
+              <li>MCPulse 版本、操作系统和受影响客户端。</li>
+              <li>导出的脱敏 JSON 报告。</li>
+              <li>用户看到的完整错误，以及同一服务能否在其他客户端正常工作。</li>
+              <li>问题是否出现在客户端、运行环境或 MCP 服务升级之后。</li>
+            </ul>
+            <h3>不要提供</h3><ul>
+              <li>未脱敏 API Key、OAuth Token、Cookie、密码或私有仓库地址。</li>
+              <li>除非对方具有权限且传输方式安全，否则不要提供完整私有配置。</li>
+            </ul>`
+          },
+          {
+            id: "faq", title: "10. 常见问题", lead: "这里集中回答用户刚开始使用时最常遇到的问题。",
+            html: `<details open><summary>点击“立即检测”会修改文件吗？</summary><p>不会。检测是只读操作。只有用户打开修复预览并明确确认符合条件的修复后，配置才会改变。</p></details>
+            <details><summary>为什么某个客户端显示“尚未配置”？</summary><p>MCPulse 没有在已知位置找到受支持的配置文件。如果客户端未安装或从未配置 MCP，这是正常情况。</p></details>
+            <details><summary>MCPulse 能替我创建或找回 Token 吗？</summary><p>不能。它可以提示缺少必要环境变量，但账号授权必须通过对应服务商完成。</p></details>
+            <details><summary>所有问题都能自动修复吗？</summary><p>不能。安全修复仅限于确定性的配置转换。远程故障、权限、企业策略、账号凭据和服务程序缺陷需要人工处理。</p></details>
+            <details><summary>为什么修复被跳过了？</summary><p>配置可能在检测后发生了变化。MCPulse 使用内容哈希防止覆盖用户或其他程序的新修改。</p></details>
+            <details><summary>命令行和 Desktop 可以同时使用吗？</summary><p>可以。它们使用同一个核心检测和修复模型。任何一边修改后，都建议重新检测。</p></details>
+            <details><summary>MCPulse 会一直在后台运行吗？</summary><p>正常使用不需要后台服务。只有用户打开软件或执行命令时才会运行。</p></details>
+            <details><summary>这份手册可以保存成 PDF 吗？</summary><p>可以。切换到需要的语言后，使用浏览器的“打印”或“另存为 PDF”。</p></details>`
+          },
+          {
+            id: "habits", title: "11. 推荐使用习惯", lead: "一些简单习惯可以让 MCP 配置更容易理解、恢复和维护。",
+            html: `<ul>
+              <li>优先把 Token 放在环境变量或客户端认可的授权流程中，不要直接写入配置。</li>
+              <li>升级 Node、Python、uv、AI 客户端或移动项目后重新检测。</li>
+              <li>即使标记为安全修复，也要先查看修改预览。</li>
+              <li>在修复后的 MCP 真正完成一次工作前保留备份。</li>
+              <li>每次只检查一个失败服务，让问题范围保持清晰。</li>
+              <li>提交兼容性问题之前先升级 MCPulse。</li>
+            </ul>`
+          },
+          {
+            id: "glossary", title: "12. 通俗术语表", lead: "了解以下几个词，就能更容易看懂 MCP 故障。",
+            html: `<table><thead><tr><th>术语</th><th>通俗含义</th></tr></thead><tbody>
+              <tr><td>MCP</td><td>让 AI 客户端与外部工具服务交换信息的协议。</td></tr>
+              <tr><td>主机/客户端</td><td>启动或连接 MCP 的 AI 软件，例如 Codex、Cursor。</td></tr>
+              <tr><td>MCP 服务</td><td>向 AI 提供工具、资源或提示的本地进程或远程地址。</td></tr>
+              <tr><td>stdio</td><td>通过本地子进程的输入和输出交换协议消息。</td></tr>
+              <tr><td>HTTP 传输</td><td>通过网络连接 MCP 地址。</td></tr>
+              <tr><td>握手</td><td>连接开始时确认协议版本和双方能力的过程。</td></tr>
+              <tr><td>脱敏</td><td>分享报告前把可能敏感的值替换掉。</td></tr>
+              <tr><td>回滚</td><td>使用修复前的备份恢复配置。</td></tr>
+            </tbody></table>`
+          }
+        ],
+        footer: "MCPulse 离线使用手册 · 当前为预发布文档，v1.0 前功能可能调整。"
+      },
+      ja: {
+        edition: "オフラインハンドブック · v0.1",
+        sideNote: "このハンドブックは MCPulse に同梱され、完全にオフラインで利用できます。ブラウザーの印刷機能で、現在の言語を PDF として保存できます。",
+        hero: {
+          eyebrow: "安心して使い始める",
+          title: "MCP 接続を理解・診断し、安全に修復する",
+          text: "MCPulse は Codex、Claude、Cursor、VS Code、Gemini CLI、OpenCode とローカル／リモート MCP ツールの接続を支援します。MCP の事前知識がなくても、重要な操作を理解できるように説明します。",
+          pills: ["Windows · macOS · Linux", "CLI + Desktop", "ローカル処理", "日本語 · 中文 · English"]
+        },
+        sections: [
+          {
+            id: "understand", title: "1. MCPulse の役割", lead: "MCP は、AI 開発ツールを GitHub、ブラウザー、データベース、ローカルツールにつなぐ「プラグ」のようなものです。MCPulse はその接続ドクターです。",
+            html: `<div class="cards">
+              <div class="card"><strong>検出</strong><p>AI ツールの設定を探します。見つからなくても勝手に作成・変更しません。</p></div>
+              <div class="card"><strong>診断</strong><p>パス、コマンド、環境変数、構文、接続の問題を分かりやすく説明します。</p></div>
+              <div class="card"><strong>安全な修復</strong><p>決定的で低リスクの変更をプレビューし、バックアップ後に適用・検証します。</p></div>
+              <div class="card"><strong>証拠の共有</strong><p>一般的な秘密情報を匿名化したレポートを出力します。</p></div>
+            </div>
+            <div class="callout"><strong>MCPulse ではないもの</strong><p>AI チャットクライアント、MCP マーケットプレイス、バックグラウンドのクラウドサービスではありません。ユーザーが起動したときだけローカルで動作します。</p></div>`
+          },
+          {
+            id: "quick-start", title: "2. 5 分クイックスタート", lead: "Desktop は最も簡単な方法です。CLI はターミナルや自動化で同じコア機能を提供します。",
+            html: `<h3>Desktop</h3><ol class="steps">
+              <li>OS に合ったパッケージをダウンロードして MCPulse を開きます。</li>
+              <li>右上で言語を選びます。選択内容は保存されます。</li>
+              <li><strong>今すぐ診断</strong>を選びます。既定の診断は読み取り専用です。</li>
+              <li>各クライアントカードの緑・黄・赤の結果を確認します。</li>
+              <li>安全な修復がある場合、変更前後を確認してから実行します。</li>
+            </ol>
+            <h3>CLI</h3><pre>mcpulse scan
+mcpulse scan --lang zh-CN
+mcpulse scan --lang ja
+mcpulse scan --json</pre>`
+          },
+          {
+            id: "desktop", title: "3. Desktop 画面", lead: "ターミナルを使わない方でも、ダッシュボードから診断と安全な修復を行えます。",
+            html: `<table><thead><tr><th>領域</th><th>用途</th></tr></thead><tbody>
+              <tr><td>サマリーカード</td><td>検出したクライアント、MCP サーバー、問題、安全な修復の数を表示します。</td></tr>
+              <tr><td>クライアントカード</td><td>設定パス、サーバー数、状態、診断結果を表示します。</td></tr>
+              <tr><td>今すぐ診断</td><td>読み取り専用の検出と静的チェックを再実行します。</td></tr>
+              <tr><td>安全な問題を一括修復</td><td>書き込む前に変更プレビューを開きます。</td></tr>
+              <tr><td>匿名化レポート</td><td>ホームパスや一般的な Token を隠した JSON を作成します。</td></tr>
+              <tr><td>チュートリアルとヘルプ</td><td>このオフラインハンドブックを既定ブラウザーで開きます。</td></tr>
+            </tbody></table>`
+          },
+          {
+            id: "statuses", title: "4. 診断結果の読み方", lead: "色は次の行動を決める目安であり、第三者サーバーの安全性を保証するものではありません。",
+            html: `<table><thead><tr><th>状態</th><th>意味</th><th>対応</th></tr></thead><tbody>
+              <tr><td>緑 · 正常</td><td>実行したチェックで既知の問題が見つかりませんでした。</td><td>通常は操作不要です。将来のプロトコル診断でサーバー固有の問題が見つかる可能性はあります。</td></tr>
+              <tr><td>黄 · 確認が必要</td><td>一般的な互換性リスクがあります。</td><td>説明と修復プレビューを確認してください。</td></tr>
+              <tr><td>赤 · 問題あり</td><td>設定が無効または不完全です。</td><td>安全と明示された修復以外は自動変更しないでください。</td></tr>
+              <tr><td>灰 · 未設定</td><td>既知の場所に設定ファイルがありません。</td><td>そのクライアントを使っていなければ正常です。</td></tr>
+            </tbody></table>
+            <div class="callout warning"><strong>重要</strong><p>「正常」は実行済みチェックの合格を示すだけで、MCP サーバーの信頼性やアカウント認証を保証しません。</p></div>`
+          },
+          {
+            id: "repair", title: "5. ワンクリック修復・バックアップ・ロールバック", lead: "ワンクリック修復は、結果が明確で検証可能な低リスク変更だけに限定されます。",
+            html: `<ol class="steps">
+              <li>MCPulse が設定を読み、内容のハッシュを記録します。</li>
+              <li>変更前と変更後のコマンドを確認します。</li>
+              <li>確認後、診断以降にファイルが変更されていないか再確認します。</li>
+              <li>元の設定をローカルのトランザクションバックアップへコピーします。</li>
+              <li>変更を適用し、構文を再検証します。</li>
+              <li>検証に失敗した場合は元の設定を復元します。</li>
+            </ol>
+            <h3>CLI 修復コマンド</h3><pre>mcpulse repair --plan
+mcpulse repair --apply-safe</pre>
+            <div class="callout warning"><strong>「ワンクリック」は「盲目的な信頼」ではありません</strong><p>資格情報、企業ポリシー、ファイアウォール、リモート障害、不明なサーバー動作はユーザーまたは管理者の判断が必要です。</p></div>`
+          },
+          {
+            id: "cli", title: "6. コマンドラインリファレンス", lead: "CLI は開発 PC、リモート環境、自動化、サポート作業に適しています。",
+            html: `<table><thead><tr><th>コマンド</th><th>結果</th></tr></thead><tbody>
+              <tr><td><code>mcpulse scan</code></td><td>読みやすいローカル診断。</td></tr>
+              <tr><td><code>mcpulse scan --json</code></td><td>機械可読の匿名化レポート。</td></tr>
+              <tr><td><code>mcpulse scan --lang en</code></td><td>英語で出力。</td></tr>
+              <tr><td><code>mcpulse scan --lang zh-CN</code></td><td>簡体字中国語で出力。</td></tr>
+              <tr><td><code>mcpulse scan --lang ja</code></td><td>日本語で出力。</td></tr>
+              <tr><td><code>mcpulse repair --plan</code></td><td>書き込まずに修復案を表示。</td></tr>
+              <tr><td><code>mcpulse repair --apply-safe</code></td><td>バックアップ後、安全な修復を適用。</td></tr>
+            </tbody></table>`
+          },
+          {
+            id: "privacy", title: "7. プライバシーとセキュリティ", lead: "MCP 設定には機密パスや資格情報が含まれる場合があります。MCPulse は不要な露出を最小限にします。",
+            html: `<ul>
+              <li>アカウント、テレメトリ、MCPulse クラウドは不要です。</li>
+              <li>既定の診断は既知の設定場所をローカルで読み取ります。</li>
+              <li>レポートはホームパスと一般的な Token 形式を置き換えます。</li>
+              <li>バックアップはローカルですが元の秘密を含む場合があり、元設定と同様に保護が必要です。</li>
+              <li>発見した MCP サーバーが安全だとは宣言しません。</li>
+              <li>将来のアクティブ診断では、選択したサーバープロセスを起動することを明示します。</li>
+            </ul>
+            <div class="callout"><strong>レポート共有前</strong><p>必ず人が最終確認してください。自動匿名化ですべての独自秘密形式を検出できる保証はありません。</p></div>`
+          },
+          {
+            id: "platforms", title: "8. Windows・macOS・Linux・WSL", lead: "基本概念は共通ですが、プロセス起動と設定パスは OS ごとに異なります。",
+            html: `<table><thead><tr><th>プラットフォーム</th><th>一般的な注意点</th></tr></thead><tbody>
+              <tr><td>Windows</td><td><code>npx.cmd</code> などで <code>cmd /c</code> が必要な場合があります。空白を含むパスと引用符にも注意します。</td></tr>
+              <tr><td>macOS</td><td>GUI アプリと Terminal で PATH が異なる場合があります。Gatekeeper の制限もあります。</td></tr>
+              <tr><td>Linux</td><td>実行権限、ディストリビューションごとのパス、共有ライブラリ不足が一般的です。</td></tr>
+              <tr><td>WSL</td><td>Windows 実行ファイルと Linux パス、または Linux 実行ファイルと未変換 Windows パスを混在させないでください。</td></tr>
+            </tbody></table>`
+          },
+          {
+            id: "reports", title: "9. レポートとサポート依頼", lead: "良いレポートは、何を確認し、どこで失敗し、何が変わったかを秘密を漏らさず伝えます。",
+            html: `<h3>含める情報</h3><ul>
+              <li>MCPulse バージョン、OS、影響を受けるクライアント。</li>
+              <li>匿名化 JSON レポート。</li>
+              <li>表示された完全なエラーと、別クライアントでは動くかどうか。</li>
+              <li>クライアント、ランタイム、サーバー更新後に始まったか。</li>
+            </ul>
+            <h3>含めない情報</h3><ul>
+              <li>未匿名化 API Key、OAuth Token、Cookie、パスワード、非公開リポジトリ URL。</li>
+              <li>権限のない相手や安全でない経路への完全な非公開設定。</li>
+            </ul>`
+          },
+          {
+            id: "faq", title: "10. よくある質問", lead: "初めて使う方が疑問に思う項目をまとめています。",
+            html: `<details open><summary>「今すぐ診断」でファイルは変更されますか？</summary><p>いいえ。診断は読み取り専用です。修復プレビューを開き、対象の修復を明示的に確認した場合のみ変更されます。</p></details>
+            <details><summary>なぜ「未設定」と表示されますか？</summary><p>既知の場所に対応設定がありません。未インストール、または MCP 未設定なら正常です。</p></details>
+            <details><summary>Token を作成・復元できますか？</summary><p>できません。必要な環境変数がないことは示せますが、認証は各プロバイダーで行います。</p></details>
+            <details><summary>すべて自動修復できますか？</summary><p>できません。安全な修復は決定的な設定変換だけです。リモート障害、権限、企業ポリシー、資格情報、サーバーバグは手動対応です。</p></details>
+            <details><summary>なぜ修復がスキップされましたか？</summary><p>診断後に設定が変わった可能性があります。内容ハッシュで新しい変更の上書きを防ぎます。</p></details>
+            <details><summary>CLI と Desktop を一緒に使えますか？</summary><p>はい。同じコアモデルを使います。どちらかで変更した後は再診断してください。</p></details>
+            <details><summary>バックグラウンドで動作しますか？</summary><p>通常利用にバックグラウンドサービスは不要です。開くかコマンドを実行したときだけ動作します。</p></details>
+            <details><summary>このハンドブックを PDF にできますか？</summary><p>希望の言語に切り替え、ブラウザーの印刷または PDF 保存を使用してください。</p></details>`
+          },
+          {
+            id: "habits", title: "11. おすすめの使い方", lead: "小さな習慣で MCP 設定を理解・復元・保守しやすくできます。",
+            html: `<ul>
+              <li>Token は設定へ直書きせず、環境変数または承認済み認証フローを使います。</li>
+              <li>Node、Python、uv、クライアントを更新した後やプロジェクト移動後に再診断します。</li>
+              <li>安全と表示されても修復プレビューを確認します。</li>
+              <li>実際のセッションで動くまでバックアップを保持します。</li>
+              <li>失敗したサーバーを一つずつ確認し、診断範囲を限定します。</li>
+              <li>互換性問題を報告する前に MCPulse を更新します。</li>
+            </ul>`
+          },
+          {
+            id: "glossary", title: "12. やさしい用語集", lead: "次の用語を知ると MCP トラブルを理解しやすくなります。",
+            html: `<table><thead><tr><th>用語</th><th>意味</th></tr></thead><tbody>
+              <tr><td>MCP</td><td>AI ホストと外部ツールサーバーが通信するためのプロトコル。</td></tr>
+              <tr><td>ホスト／クライアント</td><td>Codex や Cursor など、MCP を起動・接続する AI アプリ。</td></tr>
+              <tr><td>MCP サーバー</td><td>ツール、リソース、プロンプトを公開するローカルプロセスまたはリモート接続先。</td></tr>
+              <tr><td>stdio</td><td>子プロセスの入出力を使って通信するローカル方式。</td></tr>
+              <tr><td>HTTP トランスポート</td><td>ネットワーク上の MCP エンドポイントへの接続。</td></tr>
+              <tr><td>ハンドシェイク</td><td>接続開始時にプロトコルバージョンと機能を確認する交換。</td></tr>
+              <tr><td>匿名化</td><td>レポート共有前に機密らしい値を置き換えること。</td></tr>
+              <tr><td>ロールバック</td><td>修復前のバックアップから設定を戻すこと。</td></tr>
+            </tbody></table>`
+          }
+        ],
+        footer: "MCPulse オフラインハンドブック · プレリリース版。v1.0 までに機能が変更される場合があります。"
+      }
+    };
+
+    const select = document.querySelector("#language");
+    const content = document.querySelector("#content");
+    const toc = document.querySelector("#toc");
+    const edition = document.querySelector("#edition");
+    const sideNote = document.querySelector("#side-note");
+
+    function normalize(value) {
+      const lower = (value || "").toLowerCase();
+      if (lower.startsWith("zh")) return "zh-CN";
+      if (lower.startsWith("ja")) return "ja";
+      return "en";
+    }
+
+    function render(locale) {
+      const book = handbook[locale];
+      document.documentElement.lang = locale;
+      document.title = `MCPulse — ${book.edition}`;
+      select.value = locale;
+      edition.textContent = book.edition;
+      sideNote.textContent = book.sideNote;
+      toc.innerHTML = book.sections
+        .map(section => `<a href="#${section.id}">${section.title}</a>`)
+        .join("");
+      content.innerHTML = `
+        <article class="hero">
+          <span class="eyebrow">${book.hero.eyebrow}</span>
+          <h1>${book.hero.title}</h1>
+          <p>${book.hero.text}</p>
+          <div class="hero-meta">${book.hero.pills.map(pill => `<span class="pill">${pill}</span>`).join("")}</div>
+        </article>
+        ${book.sections.map(section => `
+          <section id="${section.id}">
+            <h2>${section.title}</h2>
+            <p class="lead">${section.lead}</p>
+            ${section.html}
+          </section>`).join("")}
+        <footer>${book.footer}</footer>`;
+
+      const links = [...toc.querySelectorAll("a")];
+      const observer = new IntersectionObserver(entries => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            links.forEach(link => link.classList.toggle("active", link.hash === `#${entry.target.id}`));
+          }
+        }
+      }, { rootMargin: "-20% 0px -70% 0px" });
+      document.querySelectorAll("main section").forEach(section => observer.observe(section));
+    }
+
+    const initial = normalize(localStorage.getItem("mcpulse.handbook.locale") || navigator.language);
+    select.addEventListener("change", () => {
+      const locale = normalize(select.value);
+      localStorage.setItem("mcpulse.handbook.locale", locale);
+      render(locale);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+    render(initial);
+  </script>
+</body>
+</html>

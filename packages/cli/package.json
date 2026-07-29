@@ -1,0 +1,20 @@
+{
+  "name": "@mcpulse/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "mcpulse": "dist/mcpulse.cjs"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "dev": "node scripts/dev.mjs"
+  },
+  "dependencies": {
+    "@mcpulse/core": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.5"
+  }
+}
