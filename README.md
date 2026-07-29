@@ -54,6 +54,12 @@ and Linux AppImage/tar.gz targets are configured as `desktop:dist:mac` and
 `desktop:dist:linux`; release artifacts should be produced and smoke-tested on
 their respective operating systems.
 
+The `Native release builds` GitHub Actions workflow builds and performs a
+non-interactive UI smoke test on Windows x64, Linux x64, macOS Apple Silicon,
+and macOS Intel runners. It also packs and install-tests the Node.js 20+ CLI.
+The workflow can be started manually or by pushing a `v*` tag. macOS packages
+are unsigned until Apple signing and notarization credentials are configured.
+
 ## Privacy and safety
 
 - No account and no telemetry.

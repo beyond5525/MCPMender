@@ -1,0 +1,172 @@
+name: Native release builds
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: Desktop (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Windows-x64
+            os: windows-latest
+            platform: windows
+            arch: x64
+          - label: Linux-x64
+            os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - label: macOS-arm64
+            os: macos-15
+            platform: macos
+            arch: arm64
+          - label: macOS-x64
+            os: macos-15-intel
+            platform: macos
+            arch: x64
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test and type-check
+        run: |
+          pnpm test
+          pnpm typecheck
+
+      - name: Build Windows package
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          pnpm --filter @mcpulse/desktop build
+          pnpm --filter @mcpulse/desktop exec electron-builder --win portable --x64
+
+      - name: Smoke-test Windows package
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $capturePath = Join-Path $env:RUNNER_TEMP "mcpulse-windows.png"
+          $env:MCPULSE_CAPTURE_PATH = $capturePath
+          $executable = "apps\desktop\release\win-unpacked\MCPulse.exe"
+          $process = Start-Process -FilePath $executable -PassThru
+          if (-not $process.WaitForExit(30000)) {
+            Stop-Process -Id $process.Id -Force
+            throw "Windows smoke test timed out."
+          }
+          if (-not (Test-Path -LiteralPath $capturePath)) {
+            throw "Windows smoke test did not produce a UI capture."
+          }
+
+      - name: Build Linux packages
+        if: matrix.platform == 'linux'
+        run: |
+          pnpm --filter @mcpulse/desktop build
+          pnpm --filter @mcpulse/desktop exec electron-builder --linux AppImage tar.gz --x64
+
+      - name: Smoke-test Linux package
+        if: matrix.platform == 'linux'
+        run: |
+          capture_path="$RUNNER_TEMP/mcpulse-linux.png"
+          MCPULSE_CAPTURE_PATH="$capture_path" timeout 30s xvfb-run -a apps/desktop/release/linux-unpacked/mcpulse
+          test -s "$capture_path"
+
+      - name: Build macOS packages
+        if: matrix.platform == 'macos'
+        run: |
+          pnpm --filter @mcpulse/desktop build
+          pnpm --filter @mcpulse/desktop exec electron-builder --mac dmg zip --${{ matrix.arch }}
+
+      - name: Smoke-test macOS package
+        if: matrix.platform == 'macos'
+        run: |
+          capture_path="$RUNNER_TEMP/mcpulse-macos.png"
+          executable="$(find apps/desktop/release -path '*/MCPulse.app/Contents/MacOS/MCPulse' -type f -print -quit)"
+          test -n "$executable"
+          MCPULSE_CAPTURE_PATH="$capture_path" "$executable"
+          test -s "$capture_path"
+
+      - name: Upload Windows package
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MCPulse-${{ matrix.label }}
+          path: apps/desktop/release/MCPulse-*-Windows-*.exe
+          if-no-files-found: error
+
+      - name: Upload Linux packages
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MCPulse-${{ matrix.label }}
+          path: |
+            apps/desktop/release/MCPulse-*-Linux-*.AppImage
+            apps/desktop/release/MCPulse-*-Linux-*.tar.gz
+          if-no-files-found: error
+
+      - name: Upload macOS packages
+        if: matrix.platform == 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MCPulse-${{ matrix.label }}
+          path: |
+            apps/desktop/release/MCPulse-*-macOS-*.dmg
+            apps/desktop/release/MCPulse-*-macOS-*.zip
+          if-no-files-found: error
+
+  cli:
+    name: CLI package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Pack and install-test CLI
+        run: |
+          pnpm --filter @mcpulse/cli build
+          package_path="$(pnpm --dir packages/cli pack --pack-destination "$RUNNER_TEMP" --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).filename))')"
+          install_dir="$RUNNER_TEMP/mcpulse-cli-install"
+          mkdir -p "$install_dir"
+          npm install --prefix "$install_dir" "$package_path"
+          "$install_dir/node_modules/.bin/mcpulse" --version
+          "$install_dir/node_modules/.bin/mcpulse" --help
+          cp "$package_path" "$RUNNER_TEMP/mcpulse-cli.tgz"
+
+      - name: Upload CLI package
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcpulse-cli
+          path: ${{ runner.temp }}/mcpulse-cli.tgz
+          if-no-files-found: error

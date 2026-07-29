@@ -400,11 +400,12 @@ mcpulse repair --apply-safe</pre>
           {
             id: "platforms", title: "8. Windows, macOS, Linux, and WSL", lead: "The core concepts are shared, but process launching and configuration paths differ.",
             html: `<table><thead><tr><th>Platform</th><th>Common concern</th></tr></thead><tbody>
-              <tr><td>Windows</td><td><code>npx.cmd</code> and other command wrappers may require <code>cmd /c</code>; quoting and spaces in paths matter.</td></tr>
-              <tr><td>macOS</td><td>GUI applications may inherit a different PATH than Terminal; downloaded binaries may be subject to Gatekeeper.</td></tr>
-              <tr><td>Linux</td><td>Executable permissions, distribution paths, and missing shared libraries are common causes.</td></tr>
+              <tr><td>Windows</td><td>Use the portable <code>.exe</code>; no installation is required. <code>npx.cmd</code> and other wrappers may require <code>cmd /c</code>, and spaces in paths matter.</td></tr>
+              <tr><td>macOS</td><td>Choose the Apple Silicon or Intel package, open the DMG, and move MCPulse to Applications. Unsigned development builds may require explicit approval in Privacy &amp; Security.</td></tr>
+              <tr><td>Linux</td><td>Make the AppImage executable with <code>chmod +x</code> and run it, or extract the tar.gz and run <code>mcpulse</code>. Missing shared libraries vary by distribution.</td></tr>
               <tr><td>WSL</td><td>Do not mix a Windows executable with a Linux path, or a Linux executable with an unconverted Windows path.</td></tr>
-            </tbody></table>`
+            </tbody></table>
+            <div class="callout"><strong>CLI on every platform</strong><p>Install the CLI package with Node.js 20 or later. Desktop and CLI do not need to stay running in the background. Native release builds are smoke-tested on their target operating systems; verify the checksum shown on the release page before opening a downloaded package.</p></div>`
           },
           {
             id: "reports", title: "9. Reports and asking for help", lead: "A useful support report describes what was checked, what failed, and what changed—without casually exposing secrets.",
@@ -565,11 +566,12 @@ mcpulse repair --apply-safe</pre>
           {
             id: "platforms", title: "8. Windows、macOS、Linux 与 WSL", lead: "核心原理相同，但不同系统的进程启动和配置路径存在差异。",
             html: `<table><thead><tr><th>平台</th><th>常见问题</th></tr></thead><tbody>
-              <tr><td>Windows</td><td><code>npx.cmd</code> 等命令可能需要 <code>cmd /c</code>；带空格路径和引号规则很重要。</td></tr>
-              <tr><td>macOS</td><td>图形软件取得的 PATH 可能与终端不同；下载的程序还可能受到 Gatekeeper 限制。</td></tr>
-              <tr><td>Linux</td><td>可执行权限、不同发行版路径和缺失动态库比较常见。</td></tr>
+              <tr><td>Windows</td><td>直接运行便携版 <code>.exe</code>，无需安装。<code>npx.cmd</code> 等命令可能需要 <code>cmd /c</code>，带空格路径和引号规则很重要。</td></tr>
+              <tr><td>macOS</td><td>按电脑选择 Apple 芯片版或 Intel 版，打开 DMG 后把 MCPulse 移入“应用程序”。未签名的开发包可能需要在“隐私与安全性”中明确允许。</td></tr>
+              <tr><td>Linux</td><td>对 AppImage 执行 <code>chmod +x</code> 后运行；也可解压 tar.gz 并运行 <code>mcpulse</code>。不同发行版缺失的动态库可能不同。</td></tr>
               <tr><td>WSL</td><td>不要让 Windows 程序直接使用 Linux 路径，也不要让 Linux 程序使用未转换的 Windows 路径。</td></tr>
-            </tbody></table>`
+            </tbody></table>
+            <div class="callout"><strong>所有平台都可使用命令行</strong><p>安装 CLI 包需要 Node.js 20 或更高版本。Desktop 和 CLI 平时都不需要常驻后台。正式发布包会在对应操作系统上执行冒烟验证；打开下载文件前，请核对发布页给出的校验值。</p></div>`
           },
           {
             id: "reports", title: "9. 导出报告与寻求帮助", lead: "一份有用的报告应该说明检查内容、失败位置和修改情况，同时避免泄露秘密。",
@@ -730,11 +732,12 @@ mcpulse repair --apply-safe</pre>
           {
             id: "platforms", title: "8. Windows・macOS・Linux・WSL", lead: "基本概念は共通ですが、プロセス起動と設定パスは OS ごとに異なります。",
             html: `<table><thead><tr><th>プラットフォーム</th><th>一般的な注意点</th></tr></thead><tbody>
-              <tr><td>Windows</td><td><code>npx.cmd</code> などで <code>cmd /c</code> が必要な場合があります。空白を含むパスと引用符にも注意します。</td></tr>
-              <tr><td>macOS</td><td>GUI アプリと Terminal で PATH が異なる場合があります。Gatekeeper の制限もあります。</td></tr>
-              <tr><td>Linux</td><td>実行権限、ディストリビューションごとのパス、共有ライブラリ不足が一般的です。</td></tr>
+              <tr><td>Windows</td><td>ポータブル <code>.exe</code> を直接実行でき、インストールは不要です。<code>npx.cmd</code> では <code>cmd /c</code> が必要な場合があり、空白を含むパスにも注意します。</td></tr>
+              <tr><td>macOS</td><td>Apple Silicon 版または Intel 版を選び、DMG を開いて MCPulse をアプリケーションへ移動します。未署名の開発ビルドは「プライバシーとセキュリティ」で明示的な許可が必要な場合があります。</td></tr>
+              <tr><td>Linux</td><td>AppImage に <code>chmod +x</code> を実行して起動するか、tar.gz を展開して <code>mcpulse</code> を実行します。必要な共有ライブラリはディストリビューションごとに異なります。</td></tr>
               <tr><td>WSL</td><td>Windows 実行ファイルと Linux パス、または Linux 実行ファイルと未変換 Windows パスを混在させないでください。</td></tr>
-            </tbody></table>`
+            </tbody></table>
+            <div class="callout"><strong>CLI は全プラットフォームで利用可能</strong><p>CLI パッケージには Node.js 20 以降が必要です。Desktop と CLI は常駐サービスを必要としません。正式リリースは対象 OS でスモークテストされます。ダウンロードしたパッケージを開く前に、リリースページのチェックサムを確認してください。</p></div>`
           },
           {
             id: "reports", title: "9. レポートとサポート依頼", lead: "良いレポートは、何を確認し、どこで失敗し、何が変わったかを秘密を漏らさず伝えます。",
