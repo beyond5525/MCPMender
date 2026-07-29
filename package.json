@@ -1,6 +1,6 @@
 {
   "name": "mcpulse",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Local MCP diagnostics and safe repair for AI developer tools.",
   "license": "Apache-2.0",

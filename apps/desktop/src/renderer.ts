@@ -13,12 +13,16 @@ let locale: Locale = normalizeLocale(
 );
 let report: ScanReport | undefined;
 let toastTimer: number | undefined;
+let lastScanAt: Date | undefined;
+let isScanning = false;
 
 const languageSelect = document.querySelector<HTMLSelectElement>("#language-select")!;
 const scanButton = document.querySelector<HTMLButtonElement>("#scan-button")!;
 const repairButton = document.querySelector<HTMLButtonElement>("#repair-button")!;
 const exportButton = document.querySelector<HTMLButtonElement>("#export-button")!;
 const helpButton = document.querySelector<HTMLButtonElement>("#help-button")!;
+const scanFeedback = document.querySelector<HTMLElement>("#scan-feedback")!;
+const scanStatus = document.querySelector<HTMLElement>("#scan-status")!;
 const clientList = document.querySelector<HTMLElement>("#client-list")!;
 const repairDialog = document.querySelector<HTMLDialogElement>("#repair-dialog")!;
 const repairList = document.querySelector<HTMLElement>("#repair-list")!;
@@ -43,7 +47,26 @@ function applyTranslations(): void {
   for (const element of document.querySelectorAll<HTMLElement>("[data-i18n]")) {
     element.textContent = t(element.dataset.i18n!);
   }
+  updateScanStatus();
   if (report) renderReport(report);
+}
+
+function updateScanStatus(): void {
+  scanFeedback.classList.toggle("scanning", isScanning);
+  scanFeedback.classList.toggle("completed", !isScanning && Boolean(lastScanAt));
+  if (isScanning) {
+    scanStatus.textContent = t("scan.progress");
+    return;
+  }
+  scanStatus.textContent = lastScanAt
+    ? t("scan.lastCompleted", {
+        time: new Intl.DateTimeFormat(locale, {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        }).format(lastScanAt)
+      })
+    : t("scan.ready");
 }
 
 function clientState(client: ClientScanResult): {
@@ -138,14 +161,37 @@ function showToast(message: string): void {
   toastTimer = window.setTimeout(() => toast.classList.remove("visible"), 3200);
 }
 
-async function runScan(): Promise<void> {
+async function runScan(announce = true): Promise<void> {
+  if (isScanning) return;
+  isScanning = true;
   scanButton.disabled = true;
   scanButton.textContent = t("action.scanning");
+  updateScanStatus();
   try {
-    renderReport(await window.mcpulse.scan());
+    const [nextReport] = await Promise.all([
+      window.mcpulse.scan(),
+      new Promise<void>((resolve) =>
+        window.setTimeout(resolve, announce ? 650 : 0)
+      )
+    ]);
+    renderReport(nextReport);
+    lastScanAt = new Date();
+    if (announce) {
+      showToast(
+        t("scan.complete", {
+          clients: nextReport.summary.detectedClients,
+          problems:
+            nextReport.summary.errors + nextReport.summary.warnings
+        })
+      );
+    }
+  } catch {
+    showToast(t("scan.failed"));
   } finally {
+    isScanning = false;
     scanButton.disabled = false;
     scanButton.textContent = t("action.scan");
+    updateScanStatus();
   }
 }
 
@@ -179,7 +225,7 @@ languageSelect.addEventListener("change", () => {
   applyTranslations();
 });
 
-scanButton.addEventListener("click", () => void runScan());
+scanButton.addEventListener("click", () => void runScan(true));
 repairButton.addEventListener("click", openRepairPreview);
 exportButton.addEventListener("click", async () => {
   if (!report) return;
@@ -206,4 +252,4 @@ document.querySelector("#dialog-confirm")!.addEventListener("click", async () =>
 });
 
 applyTranslations();
-void runScan();
+void runScan(false);

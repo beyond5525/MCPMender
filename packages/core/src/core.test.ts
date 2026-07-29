@@ -23,6 +23,9 @@ describe("localization", () => {
     expect(
       translate("zh-CN", "status.configuredServers", { count: 3 })
     ).toContain("3");
+    expect(
+      translate("zh-CN", "scan.complete", { clients: 2, problems: 1 })
+    ).toContain("2");
     expect(translate("ja", "action.scan")).toBe("今すぐ診断");
   });
 });
