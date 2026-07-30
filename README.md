@@ -11,6 +11,45 @@ Gemini CLI, and OpenCode.
 > release. Keep a copy of important configuration and review every repair
 > preview before applying it.
 
+## Product tour · 产品介绍 · 製品紹介
+
+[English](#english) · [简体中文](#简体中文) · [日本語](#日本語)
+
+### English
+
+MCPMender finds MCP configuration problems in Codex, Claude Desktop, Cursor,
+VS Code, Gemini CLI, and OpenCode. Start with a read-only scan, optionally run
+a real connection check, preview eligible low-risk repairs, and use automatic
+backups and rollback when a change is applied. Everything runs locally, and
+reports redact common secret values.
+
+| Diagnostics and safe repair | Trilingual offline handbook |
+|---|---|
+| ![MCPMender English diagnostics interface](docs/screenshots/en-main.png) | ![MCPMender English tutorial and help](docs/screenshots/en-help.png) |
+
+### 简体中文
+
+协议修匠可以检查 Codex、Claude Desktop、Cursor、VS Code、Gemini CLI 和
+OpenCode 的 MCP 配置问题。先进行完全只读的普通检测，需要时再执行真实连接
+检查；符合安全条件的问题可以预览后一键修复，并自动备份、支持回滚。所有处理
+都在本地完成，导出的报告会隐藏常见密钥和敏感值。
+
+| 本地检测与安全修复 | 中文离线教程与帮助 |
+|---|---|
+| ![协议修匠简体中文检测界面](docs/screenshots/zh-cn-main.png) | ![协议修匠简体中文教程与帮助](docs/screenshots/zh-cn-help.png) |
+
+### 日本語
+
+MCPMender は Codex、Claude Desktop、Cursor、VS Code、Gemini CLI、
+OpenCode の MCP 設定を検査します。最初は読み取り専用で診断し、必要な場合
+だけ実際の接続確認を実行できます。安全な修復候補は変更内容を確認してから
+適用でき、自動バックアップとロールバックにも対応します。処理はローカルで
+完結し、レポートでは一般的な秘密情報を匿名化します。
+
+| ローカル診断と安全な修復 | 日本語オフラインチュートリアル |
+|---|---|
+| ![MCPMender 日本語診断画面](docs/screenshots/ja-main.png) | ![MCPMender 日本語チュートリアルとヘルプ](docs/screenshots/ja-help.png) |
+
 ## What it does
 
 - Discovers supported MCP configuration files on Windows, macOS, and Linux.

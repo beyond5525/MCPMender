@@ -47,4 +47,14 @@ describe("offline handbook", () => {
     expect(html).toContain("window.print()");
     expect(html).toContain("localStorage");
   });
+
+  it("keeps the brand mark visible beside long translated labels", async () => {
+    const html = await readFile(handbookPath, "utf8");
+
+    expect(html).toMatch(/\.logo\s*\{[^}]*flex:\s*0 0 42px;/s);
+    expect(html).toContain(".brand > div { min-width: 0; }");
+    expect(html).toContain(
+      ".brand strong, .brand small { overflow-wrap: anywhere; }"
+    );
+  });
 });

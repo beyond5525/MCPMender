@@ -171,12 +171,24 @@ describe("desktop diagnostics workflow", () => {
     expect(styles).toContain("min-width: 0");
   });
 
-  it("fails release captures when the expected renderer DOM is absent", async () => {
+  it("isolates release captures and fails when the expected renderer DOM is absent", async () => {
     const main = await readFile(
       path.resolve(process.cwd(), "src/main.ts"),
       "utf8"
     );
 
+    expect(main).toContain(
+      "Boolean(process.env.MCPMENDER_CAPTURE_PATH?.trim())"
+    );
+    expect(main).toContain("isCaptureRun");
+    expect(main).toContain("process.env.MCPMENDER_CAPTURE_HOME_DIR?.trim()");
+    expect(main).toContain(
+      "process.env.MCPMENDER_CAPTURE_APPDATA_DIR?.trim()"
+    );
+    expect(main).toContain("captureHomeDir ? { homeDir: captureHomeDir } : {}");
+    expect(main).toContain(
+      "captureAppDataDir ? { appDataDir: captureAppDataDir } : {}"
+    );
     expect(main).toContain("captureTarget === \"help\"");
     expect(main).toContain(
       "\"document.querySelector('#help-button')?.click()\""

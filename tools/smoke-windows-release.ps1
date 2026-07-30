@@ -9,6 +9,10 @@ param(
     [ValidateSet("main", "help")]
     [string]$CaptureTarget = "main",
 
+    [string]$UserProfilePath,
+
+    [string]$DataDirectory,
+
     [ValidateRange(5, 120)]
     [int]$TimeoutSeconds = 45
 )
@@ -52,9 +56,23 @@ if (Test-Path -LiteralPath $resolvedCapture) {
 
 $runId = [Guid]::NewGuid().ToString("N")
 $runRoot = [System.IO.Path]::GetFullPath((Join-Path $captureDirectory "mcpmender-smoke-$CaptureTarget-$runId"))
-$dataDirectory = Join-Path $runRoot "data"
+$effectiveDataDirectory = if ([string]::IsNullOrWhiteSpace($DataDirectory)) {
+    Join-Path $runRoot "data"
+}
+else {
+    [System.IO.Path]::GetFullPath($DataDirectory)
+}
 $runtimeTemp = Join-Path $runRoot "temp"
-New-Item -ItemType Directory -Force -Path $dataDirectory, $runtimeTemp | Out-Null
+New-Item -ItemType Directory -Force -Path $effectiveDataDirectory, $runtimeTemp | Out-Null
+$resolvedUserProfile = if ([string]::IsNullOrWhiteSpace($UserProfilePath)) {
+    $null
+}
+else {
+    [System.IO.Path]::GetFullPath($UserProfilePath)
+}
+if ($null -ne $resolvedUserProfile) {
+    New-Item -ItemType Directory -Force -Path $resolvedUserProfile | Out-Null
+}
 $baselineProcessIds = [System.Collections.Generic.HashSet[int]]::new()
 foreach ($baselineProcessId in @(Get-TargetProcessIds)) {
     [void]$baselineProcessIds.Add($baselineProcessId)
@@ -65,13 +83,24 @@ $previousCaptureTarget = $env:MCPMENDER_CAPTURE_TARGET
 $previousDataDir = $env:MCPMENDER_DATA_DIR
 $previousTemp = $env:TEMP
 $previousTmp = $env:TMP
+$previousCaptureHomeDir = $env:MCPMENDER_CAPTURE_HOME_DIR
+$previousCaptureAppDataDir = $env:MCPMENDER_CAPTURE_APPDATA_DIR
 $process = $null
 try {
     $env:MCPMENDER_CAPTURE_PATH = $resolvedCapture
     $env:MCPMENDER_CAPTURE_TARGET = if ($CaptureTarget -eq "help") { "help" } else { $null }
-    $env:MCPMENDER_DATA_DIR = $dataDirectory
+    $env:MCPMENDER_DATA_DIR = $effectiveDataDirectory
     $env:TEMP = $runtimeTemp
     $env:TMP = $runtimeTemp
+    if ($null -ne $resolvedUserProfile) {
+        $env:MCPMENDER_CAPTURE_HOME_DIR = $resolvedUserProfile
+        $env:MCPMENDER_CAPTURE_APPDATA_DIR = Join-Path $resolvedUserProfile "AppData\Roaming"
+        New-Item -ItemType Directory -Force -Path $env:MCPMENDER_CAPTURE_APPDATA_DIR | Out-Null
+    }
+    else {
+        $env:MCPMENDER_CAPTURE_HOME_DIR = $null
+        $env:MCPMENDER_CAPTURE_APPDATA_DIR = $null
+    }
 
     $process = Start-Process -FilePath $resolvedExecutable -PassThru -WindowStyle Hidden
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
@@ -154,6 +183,8 @@ finally {
     $env:MCPMENDER_DATA_DIR = $previousDataDir
     $env:TEMP = $previousTemp
     $env:TMP = $previousTmp
+    $env:MCPMENDER_CAPTURE_HOME_DIR = $previousCaptureHomeDir
+    $env:MCPMENDER_CAPTURE_APPDATA_DIR = $previousCaptureAppDataDir
     if (Test-Path -LiteralPath $runRoot) {
         Remove-Item -LiteralPath $runRoot -Recurse -Force -ErrorAction SilentlyContinue
     }

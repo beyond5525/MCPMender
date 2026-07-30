@@ -237,10 +237,21 @@ if (!hasSingleInstanceLock) {
 function desktopScanOptions(): {
   projectDir?: string;
   skipProjectConfigs: boolean;
+  homeDir?: string;
+  appDataDir?: string;
 } {
+  const isCaptureRun = Boolean(process.env.MCPMENDER_CAPTURE_PATH?.trim());
+  const captureHomeDir = isCaptureRun
+    ? process.env.MCPMENDER_CAPTURE_HOME_DIR?.trim()
+    : undefined;
+  const captureAppDataDir = isCaptureRun
+    ? process.env.MCPMENDER_CAPTURE_APPDATA_DIR?.trim()
+    : undefined;
   return {
     projectDir: selectedProjectDir,
-    skipProjectConfigs: !selectedProjectDir
+    skipProjectConfigs: !selectedProjectDir,
+    ...(captureHomeDir ? { homeDir: captureHomeDir } : {}),
+    ...(captureAppDataDir ? { appDataDir: captureAppDataDir } : {})
   };
 }
 
@@ -647,7 +658,7 @@ function createWindow(): void {
           console.error("MCPMender UI smoke capture failed.", error);
           app.exit(70);
         }
-      }, 1200);
+      }, 2000);
     }
   });
 }

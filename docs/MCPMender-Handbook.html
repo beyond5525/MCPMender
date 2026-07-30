@@ -58,6 +58,7 @@
       display: grid;
       width: 42px;
       height: 42px;
+      flex: 0 0 42px;
       place-items: center;
       border: 1px solid rgba(89, 227, 206, .35);
       border-radius: 13px;
@@ -66,7 +67,9 @@
       font-weight: 900;
       box-shadow: 0 0 30px rgba(89, 227, 206, .12);
     }
+    .brand > div { min-width: 0; }
     .brand strong, .brand small { display: block; }
+    .brand strong, .brand small { overflow-wrap: anywhere; }
     .brand small { margin-top: 3px; color: var(--muted); font-size: 11px; }
     .language, .print-button {
       width: calc(100% - 28px);
