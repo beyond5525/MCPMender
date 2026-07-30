@@ -205,7 +205,11 @@ jobs:
                   cat "$launch_log"
                 fi
               else
-                env "${launch_environment[@]}" timeout 45s xvfb-run -a "$executable"
+                # Hosted runners extract the tarball as an unprivileged user, so
+                # chrome-sandbox cannot have root ownership and mode 4755 here.
+                # Disable it only for this isolated CI smoke launch; the shipped
+                # executable keeps Electron's normal sandbox defaults.
+                env "${launch_environment[@]}" timeout 45s xvfb-run -a "$executable" --no-sandbox
               fi
 
               sleep 2
