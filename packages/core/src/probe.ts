@@ -87,10 +87,49 @@ async function closeQuietly(
     | undefined
 ): Promise<void> {
   if (!transport) return;
+  const stdioPid =
+    transport instanceof StdioClientTransport ? transport.pid : null;
+  const closePromise = transport.close().catch(() => undefined);
   await Promise.race([
-    transport.close().catch(() => undefined),
+    closePromise,
     new Promise<void>((resolve) => setTimeout(resolve, 750))
   ]);
+  if (!stdioPid || !processIsAlive(stdioPid)) return;
+
+  try {
+    process.kill(stdioPid, "SIGTERM");
+  } catch {
+    return;
+  }
+  if (await waitForProcessExit(stdioPid, 750)) return;
+
+  try {
+    process.kill(stdioPid, "SIGKILL");
+  } catch {
+    return;
+  }
+  await waitForProcessExit(stdioPid, 1_500);
+}
+
+function processIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function waitForProcessExit(
+  pid: number,
+  timeoutMs: number
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!processIsAlive(pid)) return true;
+    await new Promise<void>((resolve) => setTimeout(resolve, 25));
+  }
+  return !processIsAlive(pid);
 }
 
 function environmentValue(name: string): string | undefined {

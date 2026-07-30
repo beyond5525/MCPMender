@@ -26,10 +26,15 @@ describe("probe failure boundaries", () => {
   it("times out a silent stdio server and closes it promptly", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-timeout-"));
     const serverPath = path.join(root, "silent-server.mjs");
+    const pidPath = path.join(root, "server.pid");
     const configPath = path.join(root, "mcp.json");
     await writeFile(
       serverPath,
-      "process.stdin.resume(); setInterval(() => {}, 1000);\n",
+      `import { writeFileSync } from "node:fs";
+writeFileSync(${JSON.stringify(pidPath)}, String(process.pid));
+process.stdin.resume();
+setInterval(() => {}, 1000);
+`,
       "utf8"
     );
     await writeFile(
@@ -67,6 +72,25 @@ describe("probe failure boundaries", () => {
     expect(JSON.stringify(report)).not.toContain(
       "sk-abcdefghijklmnopqrstuv"
     );
+
+    const pid = Number(await readFile(pidPath, "utf8"));
+    let alive = true;
+    for (let attempt = 0; attempt < 60 && alive; attempt += 1) {
+      try {
+        process.kill(pid, 0);
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      } catch {
+        alive = false;
+      }
+    }
+    if (alive) {
+      try {
+        process.kill(pid, 0);
+      } catch {
+        alive = false;
+      }
+    }
+    expect(alive).toBe(false);
   }, 10_000);
 
   it("classifies a 401 Streamable HTTP response as auth-required", async () => {
