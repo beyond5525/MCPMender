@@ -17,6 +17,27 @@ interface CommandResult {
   stderr: string;
 }
 
+function claudeConfigPath(home: string, appData: string): string {
+  if (process.platform === "win32") {
+    return path.join(appData, "Claude", "claude_desktop_config.json");
+  }
+  if (process.platform === "darwin") {
+    return path.join(
+      home,
+      "Library",
+      "Application Support",
+      "Claude",
+      "claude_desktop_config.json"
+    );
+  }
+  return path.join(
+    home,
+    ".config",
+    "Claude",
+    "claude_desktop_config.json"
+  );
+}
+
 async function runNode(
   args: string[],
   options: {
@@ -177,11 +198,11 @@ describe("packaged CLI entry point", () => {
     const secret = "cli-api-token-secret";
     const cloudSecret = "aws-secret-cli-value";
     const result = await runNode(["scan", "--json", "--lang", "en"], {
-      setupHome: async (_home, appData) => {
-        const configDir = path.join(appData, "Claude");
-        await mkdir(configDir, { recursive: true });
+      setupHome: async (home, appData) => {
+        const configPath = claudeConfigPath(home, appData);
+        await mkdir(path.dirname(configPath), { recursive: true });
         await writeFile(
-          path.join(configDir, "claude_desktop_config.json"),
+          configPath,
           JSON.stringify({
             mcpServers: {
               private: {
@@ -214,10 +235,10 @@ describe("packaged CLI entry point", () => {
             serverPath,
             `process.stderr.write("DATABASE_URL=postgres://db-user:${password}@example.test/app\\n"); process.exit(1);`
           );
-          const configDir = path.join(appData, "Claude");
-          await mkdir(configDir, { recursive: true });
+          const configPath = claudeConfigPath(home, appData);
+          await mkdir(path.dirname(configPath), { recursive: true });
           await writeFile(
-            path.join(configDir, "claude_desktop_config.json"),
+            configPath,
             JSON.stringify({
               mcpServers: {
                 leaky: { command: process.execPath, args: [serverPath] }
