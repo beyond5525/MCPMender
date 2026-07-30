@@ -1,6 +1,6 @@
 {
   "name": "@mcpmender/desktop",
-  "version": "0.3.0-beta.3",
+  "version": "0.3.0-beta.4",
   "description": "MCPMender (协议修匠): local MCP diagnostics, live connection checks, and safe repair.",
   "author": "MCPMender contributors",
   "license": "Apache-2.0",

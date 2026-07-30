@@ -71,7 +71,7 @@ Get-FileHash .\Windows\MCPMender\MCPMender.exe -Algorithm SHA256
 On macOS or Linux:
 
 ```sh
-shasum -a 256 MCPMender-0.3.0-beta.3-*
+shasum -a 256 MCPMender-0.3.0-beta.4-*
 ```
 
 Compare the complete 64-character hash with `SHA256SUMS.txt`. A mismatch means
@@ -110,7 +110,7 @@ Also verify the downloaded DMG or ZIP against `SHA256SUMS.txt`.
 Linux AppImage and tar.gz files are not Authenticode- or Apple-signed. Verify
 their SHA-256 values against `SHA256SUMS.txt` before use. Distribution package
 signing may be added after the beta, but it is not claimed for version
-0.3.0-beta.3.
+0.3.0-beta.4.
 
 ## Release maintainer command
 

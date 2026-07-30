@@ -5,6 +5,23 @@ All notable changes to MCPMender（协议修匠）are recorded here.
 The project follows semantic versioning where practical. Versions containing
 `beta` are pre-release builds and may change before v1.0.
 
+## [0.3.0-beta.4] - 2026-07-30
+
+### Fixed
+
+- Force-closed timed-out stdio MCP server processes so diagnostics no longer
+  leave background processes behind on Linux or macOS.
+
+### Release engineering
+
+- Made cross-platform compatibility tests use each runner's native paths and
+  separators while retaining collective Windows, Linux, and macOS coverage.
+- Updated maintained GitHub Actions dependencies and completed native package,
+  launch, screenshot, shutdown, signature, and archive checks for Windows x64,
+  Linux x64, macOS arm64, and macOS x64.
+- Made the extracted Linux tarball smoke test compatible with an unprivileged
+  hosted runner without changing the sandbox defaults of shipped packages.
+
 ## [0.3.0-beta.3] - 2026-07-30
 
 ### Fixed

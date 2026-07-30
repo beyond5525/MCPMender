@@ -111,7 +111,7 @@ describe("packaged CLI entry point", () => {
     expect(result).toMatchObject({
       exitCode: 0,
       stderr: "",
-      stdout: "0.3.0-beta.3\n"
+      stdout: "0.3.0-beta.4\n"
     });
   });
 
@@ -119,7 +119,7 @@ describe("packaged CLI entry point", () => {
     const result = await runNode(["help", "--lang", "en"]);
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
-    expect(result.stdout).toContain("MCPMender 0.3.0-beta.3");
+    expect(result.stdout).toContain("MCPMender 0.3.0-beta.4");
     expect(result.stdout).toContain("mcpmender scan");
     expect(result.stdout).toContain("mcpmender probe");
     expect(result.stdout).toContain("mcpmender repair");

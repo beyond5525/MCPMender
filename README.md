@@ -7,7 +7,7 @@ It helps people find out why an MCP server is not visible, will not start, or
 cannot complete an MCP handshake in Codex, Claude Desktop, Cursor, VS Code,
 Gemini CLI, and OpenCode.
 
-> **Release status:** `0.3.0-beta.3`. This is a public beta, not a stable v1.0
+> **Release status:** `0.3.0-beta.4`. This is a public beta, not a stable v1.0
 > release. Keep a copy of important configuration and review every repair
 > preview before applying it.
 
@@ -100,10 +100,10 @@ report after removing private paths and credentials.
 ## Command-line installation
 
 The release tarball requires Node.js 20.3 or newer. Download
-`CLI/mcpmender-0.3.0-beta.3.tgz` from the release archive, then run:
+`CLI/mcpmender-0.3.0-beta.4.tgz` from the release archive, then run:
 
 ```sh
-npm install --global ./mcpmender-0.3.0-beta.3.tgz
+npm install --global ./mcpmender-0.3.0-beta.4.tgz
 mcpmender --version
 mcpmender --help
 ```
