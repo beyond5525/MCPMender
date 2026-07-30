@@ -472,7 +472,15 @@ env_http_headers = { X_Dynamic = "MCPMENDER_CODEX_DYNAMIC" }
 
 describe("user and project discovery", () => {
   it("discovers VS Code stable, Insiders, and profile configs on every platform", async () => {
-    for (const platform of ["win32", "darwin", "linux"] as const) {
+    // Profile discovery reads real directories. Windows separators cannot be
+    // represented as directory boundaries on a POSIX filesystem, so each
+    // native CI runner validates its own path rules and the release matrix
+    // collectively covers Windows, macOS, and Linux.
+    const nativePlatform: "win32" | "darwin" | "linux" =
+      process.platform === "win32" || process.platform === "darwin"
+        ? process.platform
+        : "linux";
+    for (const platform of [nativePlatform]) {
       const root = await mkdtemp(
         path.join(os.tmpdir(), `mcpmender-vscode-${platform}-`)
       );
