@@ -5,18 +5,32 @@
   "description": "MCPMender (协议修匠): cross-platform MCP configuration diagnostics, live handshake checks, and safe repair.",
   "author": "MCPMender contributors",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/beyond5525/MCPMender.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/beyond5525/MCPMender#readme",
+  "bugs": {
+    "url": "https://github.com/beyond5525/MCPMender/issues"
+  },
   "keywords": [
     "mcp",
     "model-context-protocol",
+    "mcp-tools",
+    "mcp-diagnostics",
+    "mcp-debugger",
     "diagnostics",
+    "configuration",
     "repair",
+    "developer-tools",
     "codex",
-    "claude",
-    "cursor"
+    "claude-desktop",
+    "cursor",
+    "cross-platform"
   ],
   "publishConfig": {
     "access": "public",
-    "provenance": true,
     "tag": "beta"
   },
   "files": [

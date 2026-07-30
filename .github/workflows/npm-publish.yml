@@ -1,0 +1,155 @@
+name: Publish CLI to npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version from packages/cli/package.json (for example: 0.3.0-beta.5)"
+        required: true
+        type: string
+      confirmation:
+        description: "Type: publish mcpmender@<version>"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Verify and publish mcpmender@beta
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: npm-publish
+      url: https://www.npmjs.com/package/mcpmender
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      REQUESTED_VERSION: ${{ inputs.version }}
+      PUBLISH_CONFIRMATION: ${{ inputs.confirmation }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Install an OIDC-capable npm CLI
+        run: npm install --global npm@12.0.2
+
+      - name: Require an explicit, matching confirmation
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { readFileSync } = require("node:fs");
+          const manifest = JSON.parse(
+            readFileSync("packages/cli/package.json", "utf8")
+          );
+          const requested = process.env.REQUESTED_VERSION;
+          const confirmation = process.env.PUBLISH_CONFIRMATION;
+          const expectedConfirmation = `publish mcpmender@${manifest.version}`;
+
+          if (requested !== manifest.version) {
+            throw new Error(
+              `Requested version ${JSON.stringify(requested)} does not match ` +
+              `packages/cli/package.json (${manifest.version}).`
+            );
+          }
+          if (confirmation !== expectedConfirmation) {
+            throw new Error(
+              `Confirmation must exactly match: ${expectedConfirmation}`
+            );
+          }
+          if (!manifest.version.includes("-beta.")) {
+            throw new Error(
+              `Refusing to publish non-beta version ${manifest.version} with this workflow.`
+            );
+          }
+          NODE
+
+      - name: Verify npm supports Trusted Publishing
+        shell: bash
+        run: |
+          npm_version="$(npm --version)"
+          node - "$npm_version" <<'NODE'
+          const version = process.argv[2].split(".").map(Number);
+          const minimum = [11, 5, 1];
+          const supported = version.some((part, index) => part > minimum[index] &&
+            version.slice(0, index).every((value, prior) => value === minimum[prior])) ||
+            version.every((part, index) => part === minimum[index]);
+          if (!supported) {
+            throw new Error(
+              `npm ${process.argv[2]} is too old for Trusted Publishing; need >=11.5.1.`
+            );
+          }
+          NODE
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test and type-check
+        run: |
+          pnpm --filter @mcpmender/core build
+          pnpm --filter mcpmender test
+          pnpm --filter mcpmender typecheck
+
+      - name: Build the CLI
+        run: pnpm --filter mcpmender build
+
+      - name: Verify package contents
+        shell: bash
+        working-directory: packages/cli
+        run: |
+          pack_json="$(npm pack --dry-run --json)"
+          node - "$pack_json" <<'NODE'
+          const pack = JSON.parse(process.argv[2]);
+          const result = Array.isArray(pack) ? pack[0] : pack;
+          const paths = new Set((result.files ?? []).map((file) => file.path));
+          const required = [
+            "README.md",
+            "package.json",
+            "dist/mcpmender.cjs",
+            "dist/LICENSE",
+            "dist/THIRD_PARTY_NOTICES.md"
+          ];
+          for (const path of required) {
+            if (!paths.has(path)) {
+              throw new Error(`npm package is missing required file: ${path}`);
+            }
+          }
+          for (const file of paths) {
+            if (
+              file.includes("..") ||
+              /\.(?:pem|key|p12|pfx|db|sqlite|zip)$/i.test(file)
+            ) {
+              throw new Error(`npm package contains a forbidden path: ${file}`);
+            }
+          }
+          NODE
+
+      - name: Reject an existing npm version
+        shell: bash
+        run: |
+          if npm view "mcpmender@$REQUESTED_VERSION" version \
+            --registry=https://registry.npmjs.org/ >/dev/null 2>&1; then
+            echo "mcpmender@$REQUESTED_VERSION already exists and cannot be overwritten." >&2
+            exit 1
+          fi
+
+      - name: Publish public beta with OIDC
+        working-directory: packages/cli
+        run: npm publish --access public --tag beta

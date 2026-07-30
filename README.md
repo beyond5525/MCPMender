@@ -1,5 +1,10 @@
 # MCPMender · 协议修匠
 
+[![Native release builds](https://github.com/beyond5525/MCPMender/actions/workflows/release-builds.yml/badge.svg)](https://github.com/beyond5525/MCPMender/actions/workflows/release-builds.yml)
+[![GitHub release](https://img.shields.io/github/v/release/beyond5525/MCPMender?include_prereleases&sort=semver)](https://github.com/beyond5525/MCPMender/releases)
+[![License: Apache-2.0](https://img.shields.io/github/license/beyond5525/MCPMender)](LICENSE)
+[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-2563eb)](#desktop-installation)
+
 MCPMender（协议修匠）是一款在本地运行的 MCP 配置诊断与安全修复工具，
 同时提供 Desktop 图形界面和 `mcpmender` 命令行。
 
@@ -7,9 +12,31 @@ It helps people find out why an MCP server is not visible, will not start, or
 cannot complete an MCP handshake in Codex, Claude Desktop, Cursor, VS Code,
 Gemini CLI, and OpenCode.
 
+<p align="center">
+  <a href="https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.4"><strong>Download MCPMender 0.3.0-beta.4 · 下载公开测试版 · パブリックベータをダウンロード →</strong></a>
+  <br>
+  Windows x64 · macOS Apple Silicon / Intel · Linux x64 · Command line
+</p>
+
 > **Release status:** `0.3.0-beta.4`. This is a public beta, not a stable v1.0
 > release. Keep a copy of important configuration and review every repair
 > preview before applying it.
+
+## MCPMender in 30 seconds
+
+![MCPMender 20-second diagnostics and safe-repair walkthrough](docs/marketing/mcpmender-demo.gif)
+
+| | |
+|---|---|
+| **The problem** | An MCP server is missing, will not start, or fails its handshake—and the cause is unclear. |
+| **Start safely** | Run a read-only scan in the Desktop app or with `mcpmender scan`; configured tools are not launched during this scan. |
+| **Go deeper only when needed** | Preview an opt-in live connection test, or review an eligible low-risk repair before applying it. |
+| **Stay in control** | MCPMender runs locally, redacts common secrets in reports, backs up changed files, and records rollback information. |
+
+**Choose your path:** [Download the Desktop app](https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.4) ·
+[Use the command line](#command-line-installation) ·
+[Read the offline handbook](docs/MCPMender-Handbook.html) ·
+[Report a problem](https://github.com/beyond5525/MCPMender/issues)
 
 ## Product tour · 产品介绍 · 製品紹介
 
