@@ -7,7 +7,7 @@ It helps people find out why an MCP server is not visible, will not start, or
 cannot complete an MCP handshake in Codex, Claude Desktop, Cursor, VS Code,
 Gemini CLI, and OpenCode.
 
-> **Release status:** `0.3.0-beta.2`. This is a public beta, not a stable v1.0
+> **Release status:** `0.3.0-beta.3`. This is a public beta, not a stable v1.0
 > release. Keep a copy of important configuration and review every repair
 > preview before applying it.
 
@@ -49,7 +49,7 @@ The exact artifact names are recorded in the release notes and checksum file.
 ### Windows
 
 1. Extract the release archive.
-2. Open the portable MCPMender `.exe`; installation is not required.
+2. Open `Windows\MCPMender\MCPMender.exe`; installation is not required.
 3. If Windows displays a publisher or SmartScreen warning, verify the published
    SHA-256 checksum before deciding whether to run it.
 
@@ -57,6 +57,11 @@ Beta Windows builds may use a self-signed certificate. A self-signed signature
 can help detect modification, but it is **not trusted automatically by Windows,
 Microsoft Defender SmartScreen, or other computers**. It is not equivalent to a
 commercially issued code-signing certificate.
+
+Windows ZIPs retained as GitHub Actions workflow artifacts are intentionally
+unsigned and include `UNSIGNED-WINDOWS-BUILD.txt`. Only a separately reviewed
+community build that includes the public certificate and matching thumbprint may
+be described as self-signed.
 
 ### macOS
 
@@ -94,18 +99,21 @@ report after removing private paths and credentials.
 
 ## Command-line installation
 
-The published package requires Node.js 20 or newer:
+The release tarball requires Node.js 20.3 or newer. Download
+`CLI/mcpmender-0.3.0-beta.3.tgz` from the release archive, then run:
 
 ```sh
-npm install --global mcpmender@beta
+npm install --global ./mcpmender-0.3.0-beta.3.tgz
 mcpmender --version
 mcpmender --help
 ```
 
-To test a downloaded npm tarball before registry publication:
+The npm registry package is not published yet. After an official npm beta is
+announced and `npm view mcpmender dist-tags` shows a `beta` tag, the equivalent
+registry command will be:
 
 ```sh
-npm install --global ./mcpmender-0.3.0-beta.2.tgz
+npm install --global mcpmender@beta
 ```
 
 Common commands:
@@ -135,6 +143,25 @@ CLI exit codes are stable for automation:
 The Desktop backup-history panel can restore a recorded repair only when the
 current configuration still matches the repaired version. This prevents
 rollback from silently overwriting later user edits.
+
+## Upgrade and uninstall
+
+MCPMender has no background service. Before upgrading, close the app and keep a
+copy of the adjacent `data` directory because it contains preferences, logs, and
+repair backups. Extract the new release to a new folder, start it once, and only
+then remove the old program files. Do not discard repair backups until the new
+version has successfully scanned the configurations you care about.
+
+To uninstall the portable Desktop, close MCPMender and delete its program
+folder. Delete the adjacent `data` directory only if you also want to remove
+preferences, logs, and rollback backups. The CLI can be removed with
+`npm uninstall --global mcpmender`; uninstalling either interface does not
+delete MCP configuration files owned by Codex, Claude, Cursor, VS Code, Gemini
+CLI, or OpenCode. If the program folder was not writable, MCPMender uses a
+fallback data location and shows its exact path in the interface. Note that path
+before closing the app, then delete it manually after MCPMender exits if you
+want a complete data removal. If the program was already deleted, extract and
+run the same release once more to display the fallback path.
 
 ## Privacy and security
 

@@ -1,6 +1,6 @@
 {
   "name": "mcpmender",
-  "version": "0.3.0-beta.2",
+  "version": "0.3.0-beta.3",
   "type": "module",
   "description": "MCPMender (协议修匠): cross-platform MCP configuration diagnostics, live handshake checks, and safe repair.",
   "author": "MCPMender contributors",
@@ -24,7 +24,7 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=20.3.0"
   },
   "bin": {
     "mcpmender": "dist/mcpmender.cjs"

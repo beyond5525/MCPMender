@@ -15,8 +15,16 @@ $workspaceManifest = Get-Content -LiteralPath (Join-Path $projectRoot "package.j
 $expectedVersion = [string]$workspaceManifest.version
 $workRoot = [System.IO.Path]::GetFullPath((Join-Path $projectRoot "work\verify-cli-artifact"))
 $resolvedPackage = (Resolve-Path -LiteralPath $PackagePath -ErrorAction Stop).Path
-$preferredToolRoot = [System.IO.Path]::GetFullPath("F:\GemeHuanJing\MCPMenderTools")
-$legacyToolRoot = [System.IO.Path]::GetFullPath("F:\GemeHuanJing\MCPulseTools")
+$portableToolRoots = @($env:MCPMENDER_TOOL_ROOT)
+if ($env:OS -eq "Windows_NT") {
+    $portableToolRoots += @(
+        "F:\GemeHuanJing\MCPMenderTools",
+        "F:\GemeHuanJing\MCPulseTools"
+    )
+}
+$portableToolRoots = $portableToolRoots |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+    ForEach-Object { [System.IO.Path]::GetFullPath($_) }
 
 function Invoke-CapturedNative {
     param(
@@ -47,7 +55,11 @@ function Resolve-Node20 {
     if (-not [string]::IsNullOrWhiteSpace($Node20Path)) {
         $candidates.Add([System.IO.Path]::GetFullPath($Node20Path))
     }
-    foreach ($toolRoot in @($preferredToolRoot, $legacyToolRoot)) {
+    $pathNode = Get-Command node -ErrorAction SilentlyContinue
+    if ($null -ne $pathNode) {
+        $candidates.Add($pathNode.Source)
+    }
+    foreach ($toolRoot in $portableToolRoots) {
         $candidates.Add((Join-Path $toolRoot "node20\node.exe"))
         $candidates.Add((Join-Path $toolRoot "node-v20\node.exe"))
 
@@ -88,7 +100,7 @@ function Resolve-Node20 {
         }
     }
 
-    throw "CLI release verification requires an official Node.js 20 x64 runtime under '$preferredToolRoot' (or pass -Node20Path)."
+    throw "CLI release verification requires Node.js 20. Put node on PATH, set MCPMENDER_TOOL_ROOT, or pass -Node20Path."
 }
 
 function Assert-SafeTarPath {
@@ -135,8 +147,14 @@ $installRoot = Join-Path $workRoot "install"
 $homeRoot = Join-Path $workRoot "home"
 $appData = Join-Path $homeRoot "AppData\Roaming"
 $claudeDirectory = Join-Path $appData "Claude"
-$runtimeTemp = Join-Path $preferredToolRoot "temp\verify-cli-artifact"
-$npmCache = Join-Path $preferredToolRoot "cache\npm"
+$runtimeToolRoot = $portableToolRoots |
+    Where-Object { Test-Path -LiteralPath $_ -PathType Container } |
+    Select-Object -First 1
+if ([string]::IsNullOrWhiteSpace($runtimeToolRoot)) {
+    $runtimeToolRoot = $workRoot
+}
+$runtimeTemp = Join-Path $runtimeToolRoot "temp\verify-cli-artifact"
+$npmCache = Join-Path $runtimeToolRoot "cache\npm"
 New-Item -ItemType Directory -Force -Path $extractRoot, $installRoot, $claudeDirectory, $runtimeTemp, $npmCache | Out-Null
 
 $tarListResult = Invoke-CapturedNative -Executable "tar.exe" -Arguments @("-tzf", $resolvedPackage)

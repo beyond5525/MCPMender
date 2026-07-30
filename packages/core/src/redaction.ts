@@ -1,22 +1,28 @@
 const AUTHORIZATION_PATTERN =
-  /\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi;
+  /\b(Bearer|Basic|Digest)\s+[A-Za-z0-9._~+/=-]+/gi;
+const AUTHORIZATION_HEADER_PATTERN =
+  /\b(authorization\s*[:=]\s*)(?:Bearer|Basic|Digest)\s+[^\r\n]+/gi;
 
 const TOKEN_PATTERNS = [
   /\bsk-[A-Za-z0-9_-]{16,}\b/g,
   /\bgh[pousr]_[A-Za-z0-9_]{20,}\b/g,
   /\bgithub_pat_[A-Za-z0-9_]{20,}\b/g
 ];
+const PRIVATE_KEY_PATTERN =
+  /-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----[\s\S]*?-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----/g;
 
 const SENSITIVE_NAME_PATTERN =
-  /^(?:apiKey|accessToken|authToken|clientSecret|privateKey|sessionKey|authorization|credential|password|passwd|secret|token)$/i;
+  /(?:apiKey|apiToken|accessKey|secretKey|secretAccessKey|accessToken|authToken|oauthToken|clientSecret|privateKey|sessionKey|authorization|credentials?|password|passwd|secret|token|connectionString|databaseUrl|dsn)$/i;
 
 const SENSITIVE_TEXT_KEY_PATTERN =
-  /(["']?(?:api[-_]?key|apiKey|access[-_]?token|accessToken|auth[-_]?token|authToken|client[-_]?secret|clientSecret|private[-_]?key|privateKey|session[-_]?key|sessionKey|authorization|credential|password|passwd|secret|token)["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;}&#]+)/gi;
+  /(["']?(?:api[-_]?(?:key|token)|apiKey|apiToken|(?:aws[-_]?)?(?:secret[-_]?access[-_]?key|access[-_]?key|secret[-_]?key)|access[-_]?token|accessToken|auth[-_]?token|authToken|oauth[-_]?token|oauthToken|client[-_]?secret|clientSecret|private[-_]?key|privateKey|session[-_]?key|sessionKey|authorization|credentials?|password|passwd|secret|token|connection[-_]?string|database[-_]?url|dsn)["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;}&#]+)/gi;
 
 const CLI_SECRET_PATTERN =
-  /(^|[\s,])(--(?:api[-_]?key|access[-_]?token|auth[-_]?token|client[-_]?secret|private[-_]?key|session[-_]?key|authorization|credential|password|passwd|secret|token))(?:(=|:)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,]+)|(\s+)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,]+))/gim;
+  /(^|[\s,])(--(?:api[-_]?(?:key|token)|(?:aws[-_]?)?(?:secret[-_]?access[-_]?key|access[-_]?key|secret[-_]?key)|access[-_]?token|auth[-_]?token|oauth[-_]?token|client[-_]?secret|private[-_]?key|session[-_]?key|authorization|credentials?|password|passwd|secret|token|connection[-_]?string|database[-_]?url|dsn))(?:(=|:)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,]+)|(\s+)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,]+))/gim;
 
 const URL_PATTERN = /\bhttps?:\/\/[^\s"'<>]+/gi;
+const CREDENTIAL_URI_PATTERN =
+  /\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis|rediss|amqp|amqps):\/\/[^\s"'<>]+/gi;
 
 function normalizedSensitiveName(key: string): string {
   return key.replace(/[^A-Za-z0-9]/g, "");
@@ -69,7 +75,12 @@ function redactHomePath(value: string, homeDir: string): string {
 }
 
 export function redactText(value: string, homeDir?: string): string {
-  let result = value.replace(
+  let result = value.replace(PRIVATE_KEY_PATTERN, "[REDACTED PRIVATE KEY]");
+  result = result.replace(
+    AUTHORIZATION_HEADER_PATTERN,
+    "$1[REDACTED]"
+  );
+  result = result.replace(
     AUTHORIZATION_PATTERN,
     (_match, scheme: string) => `${scheme} [REDACTED]`
   );
@@ -89,6 +100,7 @@ export function redactText(value: string, homeDir?: string): string {
   );
   result = result.replace(SENSITIVE_TEXT_KEY_PATTERN, "$1[REDACTED]");
   result = result.replace(URL_PATTERN, redactUrl);
+  result = result.replace(CREDENTIAL_URI_PATTERN, redactUrl);
   if (homeDir) {
     result = redactHomePath(result, homeDir);
   }

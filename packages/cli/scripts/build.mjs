@@ -11,6 +11,7 @@ import path from "node:path";
 
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist", { recursive: true });
+const packageMetadata = JSON.parse(await readFile("package.json", "utf8"));
 await build({
   entryPoints: ["src/index.ts"],
   outfile: "dist/mcpmender.cjs",
@@ -22,6 +23,9 @@ await build({
   format: "cjs",
   mainFields: ["module", "main"],
   target: "node20",
+  define: {
+    __MCPMENDER_VERSION__: JSON.stringify(packageMetadata.version)
+  },
   sourcemap: true
 });
 

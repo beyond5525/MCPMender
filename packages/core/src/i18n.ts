@@ -55,6 +55,8 @@ const messages = {
     "scan.commandMissing.detail": "Server {server} requires {command}, but it was not found in PATH or at the configured path.",
     "scan.envMissing.title": "Required environment variable is missing",
     "scan.envMissing.detail": "Server {server} references missing variable(s): {variables}.",
+    "scan.schemaInvalid.title": "Client configuration structure is invalid",
+    "scan.schemaInvalid.detail": "Server or configuration entry {server} does not match the selected client's MCP schema.",
     "scan.urlInvalid.title": "Server URL is invalid",
     "scan.urlInvalid.detail": "Server {server} does not contain a valid HTTP or HTTPS MCP URL.",
     "probe.previewTitle": "Deep connection check",
@@ -87,6 +89,7 @@ const messages = {
     "repair.windowsNpx.title": "Use the Windows command wrapper",
     "repair.windowsNpx.detail": "Change npx to cmd /d /s /c npx while preserving all existing arguments.",
     "repair.applied": "Repair applied.",
+    "repair.manifestWarning": "Repairs were applied, but the transaction manifest could not be saved. Keep the backup files.",
     "repair.skippedChanged": "Skipped because the configuration changed after the scan.",
     "repair.failed": "Repair failed; the original file was preserved."
   },
@@ -142,6 +145,8 @@ const messages = {
     "scan.commandMissing.detail": "服务 {server} 需要 {command}，但在 PATH 和配置路径中都没有找到。",
     "scan.envMissing.title": "缺少必要的环境变量",
     "scan.envMissing.detail": "服务 {server} 引用了尚未设置的变量：{variables}。",
+    "scan.schemaInvalid.title": "客户端配置结构无效",
+    "scan.schemaInvalid.detail": "服务或配置项 {server} 不符合对应客户端的 MCP 配置格式。",
     "scan.urlInvalid.title": "服务 URL 无效",
     "scan.urlInvalid.detail": "服务 {server} 没有有效的 HTTP 或 HTTPS MCP 地址。",
     "probe.previewTitle": "深度连接检测",
@@ -174,6 +179,7 @@ const messages = {
     "repair.windowsNpx.title": "使用 Windows 命令包装器",
     "repair.windowsNpx.detail": "将 npx 改为 cmd /d /s /c npx，并保留全部现有参数。",
     "repair.applied": "修复已应用。",
+    "repair.manifestWarning": "修复已生效，但无法保存事务清单。请保留备份文件。",
     "repair.skippedChanged": "检测后配置发生变化，为保护用户修改，本次已跳过。",
     "repair.failed": "修复失败，原文件未被替换。"
   },
@@ -229,6 +235,8 @@ const messages = {
     "scan.commandMissing.detail": "サーバー {server} に必要な {command} が PATH または設定パスに見つかりません。",
     "scan.envMissing.title": "必要な環境変数がありません",
     "scan.envMissing.detail": "サーバー {server} は未設定の変数を参照しています：{variables}。",
+    "scan.schemaInvalid.title": "クライアント設定の構造が無効です",
+    "scan.schemaInvalid.detail": "サーバーまたは設定項目 {server} は、選択したクライアントの MCP スキーマに適合していません。",
     "scan.urlInvalid.title": "サーバー URL が無効です",
     "scan.urlInvalid.detail": "サーバー {server} に有効な HTTP または HTTPS MCP URL がありません。",
     "probe.previewTitle": "詳細接続診断",
@@ -261,6 +269,7 @@ const messages = {
     "repair.windowsNpx.title": "Windows コマンドラッパーを使用",
     "repair.windowsNpx.detail": "既存の引数を維持したまま、npx を cmd /d /s /c npx に変更します。",
     "repair.applied": "修復を適用しました。",
+    "repair.manifestWarning": "修復は適用されましたが、トランザクションマニフェストを保存できませんでした。バックアップを保管してください。",
     "repair.skippedChanged": "診断後に設定が変更されたため、安全のためスキップしました。",
     "repair.failed": "修復に失敗しました。元のファイルは保持されています。"
   }

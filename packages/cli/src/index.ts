@@ -15,6 +15,8 @@ import {
 } from "@mcpmender/core";
 import { parseCliArguments } from "./args.js";
 
+declare const __MCPMENDER_VERSION__: string;
+
 let cli: ReturnType<typeof parseCliArguments>;
 try {
   cli = parseCliArguments(process.argv.slice(2));
@@ -29,7 +31,7 @@ const locale: Locale = normalizeLocale(
   cli.lang ?? process.env.LANG ?? Intl.DateTimeFormat().resolvedOptions().locale
 );
 const json = cli.json;
-const VERSION = "0.3.0-beta.2";
+const VERSION = __MCPMENDER_VERSION__;
 
 function t(key: string, params?: Record<string, string | number>): string {
   return translate(locale, key, params);
@@ -121,7 +123,10 @@ async function main(): Promise<void> {
     if (!run) {
       const allTargets = await planProbeTargets();
       const availableNames = new Set(
-        allTargets.map((target) => target.server.name)
+        allTargets.flatMap((target) => [
+          target.server.name,
+          `${target.clientId}/${target.server.name}`
+        ])
       );
       const missingNames = selected.filter((name) => !availableNames.has(name));
       if (missingNames.length > 0) {
@@ -132,7 +137,11 @@ async function main(): Promise<void> {
       const targets =
         selected.length === 0
           ? allTargets
-          : allTargets.filter((target) => selected.includes(target.server.name));
+          : allTargets.filter(
+              (target) =>
+                selected.includes(target.server.name) ||
+                selected.includes(`${target.clientId}/${target.server.name}`)
+            );
       if (json) {
         process.stdout.write(
           `${JSON.stringify(redactReport(targets, os.homedir()), null, 2)}\n`
@@ -213,6 +222,9 @@ async function main(): Promise<void> {
           }
         }
         process.stdout.write(`Transaction: ${result.transactionId}\n`);
+        if (result.manifestWarning) {
+          process.stderr.write(`${t("repair.manifestWarning")}\n`);
+        }
       }
       if (result.results.some((item) => !item.applied)) process.exitCode = 3;
       return;

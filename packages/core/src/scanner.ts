@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { access, readFile } from "node:fs/promises";
+import type { Dirent } from "node:fs";
+import { access, readFile, readdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { parse as parseJsonc, type ParseError } from "jsonc-parser";
@@ -36,6 +37,30 @@ async function defaultCandidates(
   const xdgConfig =
     process.env.XDG_CONFIG_HOME ?? platformPath.join(home, ".config");
   const project = options.projectDir ?? process.cwd();
+  const vscodeUserRoot =
+    platform === "darwin"
+      ? platformPath.join(
+          home,
+          "Library",
+          "Application Support",
+          "Code",
+          "User"
+        )
+      : platform === "win32"
+        ? platformPath.join(appData, "Code", "User")
+        : platformPath.join(xdgConfig, "Code", "User");
+  const vscodeInsidersUserRoot =
+    platform === "darwin"
+      ? platformPath.join(
+          home,
+          "Library",
+          "Application Support",
+          "Code - Insiders",
+          "User"
+        )
+      : platform === "win32"
+        ? platformPath.join(appData, "Code - Insiders", "User")
+        : platformPath.join(xdgConfig, "Code - Insiders", "User");
   const claudePath =
     platform === "win32"
       ? platformPath.join(
@@ -62,37 +87,51 @@ async function defaultCandidates(
       clientId: "codex",
       displayName: "Codex",
       path: platformPath.join(home, ".codex", "config.toml"),
-      format: "toml"
+      format: "toml",
+      scope: "user",
+      precedence: 10
     },
     {
       clientId: "claude-desktop",
       displayName: "Claude Desktop",
       path: claudePath,
-      format: "jsonc"
+      format: "jsonc",
+      scope: "user",
+      precedence: 10
     },
     {
       clientId: "cursor",
       displayName: "Cursor",
       path: platformPath.join(home, ".cursor", "mcp.json"),
-      format: "jsonc"
+      format: "jsonc",
+      scope: "user",
+      precedence: 10
     },
     {
       clientId: "vscode",
       displayName: "VS Code",
       path: platformPath.join(project, ".vscode", "mcp.json"),
-      format: "jsonc"
+      format: "jsonc",
+      scope: "project",
+      precedence: 20,
+      workspaceDir: project
     },
     {
       clientId: "gemini",
       displayName: "Gemini CLI",
       path: platformPath.join(home, ".gemini", "settings.json"),
-      format: "jsonc"
+      format: "jsonc",
+      scope: "user",
+      precedence: 10
     },
     {
       clientId: "opencode",
       displayName: "OpenCode",
       path: platformPath.join(xdgConfig, "opencode", "opencode.json"),
-      format: "jsonc"
+      format: "jsonc",
+      scope: "user",
+      precedence: 10,
+      workspaceDir: project
     }
   ];
 
@@ -100,34 +139,66 @@ async function defaultCandidates(
     {
       clientId: "vscode",
       displayName: "VS Code (User)",
-      path:
-        platform === "darwin"
-          ? platformPath.join(
-              home,
-              "Library",
-              "Application Support",
-              "Code",
-              "User",
-              "mcp.json"
-            )
-          : platform === "win32"
-            ? platformPath.join(appData, "Code", "User", "mcp.json")
-            : platformPath.join(xdgConfig, "Code", "User", "mcp.json"),
-      format: "jsonc"
+      path: platformPath.join(vscodeUserRoot, "mcp.json"),
+      format: "jsonc",
+      scope: "user",
+      precedence: 10,
+      workspaceDir: project
+    },
+    {
+      clientId: "vscode",
+      displayName: "VS Code Insiders (User)",
+      path: platformPath.join(vscodeInsidersUserRoot, "mcp.json"),
+      format: "jsonc",
+      scope: "user",
+      precedence: 10,
+      workspaceDir: project
     },
     {
       clientId: "opencode",
       displayName: "OpenCode (JSONC)",
       path: platformPath.join(xdgConfig, "opencode", "opencode.jsonc"),
-      format: "jsonc"
+      format: "jsonc",
+      scope: "user",
+      precedence: 11,
+      workspaceDir: project
     }
   ];
+  for (const [root, label] of [
+    [vscodeUserRoot, "VS Code"],
+    [vscodeInsidersUserRoot, "VS Code Insiders"]
+  ] as const) {
+    const profilesRoot = platformPath.join(root, "profiles");
+    let profiles: Dirent[] = [];
+    try {
+      profiles = await readdir(profilesRoot, { withFileTypes: true });
+    } catch {
+      // Profiles are optional.
+    }
+    for (const profile of profiles) {
+      if (!profile.isDirectory()) continue;
+      optionalCandidates.push({
+        clientId: "vscode",
+        displayName: `${label} (Profile ${profile.name})`,
+        path: platformPath.join(profilesRoot, profile.name, "mcp.json"),
+        format: "jsonc",
+        scope: "user",
+        precedence: 10,
+        workspaceDir: project,
+        probeUnsupportedReason:
+          "VS Code does not expose the active Profile reliably; test this server from the active VS Code Profile."
+      });
+    }
+  }
   if (platform === "win32") {
     optionalCandidates.push({
       clientId: "opencode",
       displayName: "OpenCode (Legacy)",
       path: platformPath.join(appData, "opencode", "opencode.json"),
-      format: "jsonc"
+      format: "jsonc",
+      scope: "user",
+      precedence: 9,
+      workspaceDir: project
     });
   }
 
@@ -137,43 +208,63 @@ async function defaultCandidates(
         clientId: "codex",
         displayName: "Codex (Project)",
         path: platformPath.join(project, ".codex", "config.toml"),
-        format: "toml"
+        format: "toml",
+        scope: "project",
+        precedence: 20
       },
       {
         clientId: "cursor",
         displayName: "Cursor (Project)",
         path: platformPath.join(project, ".cursor", "mcp.json"),
-        format: "jsonc"
+        format: "jsonc",
+        scope: "project",
+        precedence: 20,
+        workspaceDir: project
       },
       {
         clientId: "gemini",
         displayName: "Gemini CLI (Project)",
         path: platformPath.join(project, ".gemini", "settings.json"),
-        format: "jsonc"
+        format: "jsonc",
+        scope: "project",
+        precedence: 20,
+        workspaceDir: project
       },
       {
         clientId: "opencode",
         displayName: "OpenCode (Project)",
         path: platformPath.join(project, "opencode.json"),
-        format: "jsonc"
+        format: "jsonc",
+        scope: "project",
+        precedence: 20,
+        workspaceDir: project
       },
       {
         clientId: "opencode",
         displayName: "OpenCode (Project JSONC)",
         path: platformPath.join(project, "opencode.jsonc"),
-        format: "jsonc"
+        format: "jsonc",
+        scope: "project",
+        precedence: 21,
+        workspaceDir: project
       },
       {
         clientId: "opencode",
         displayName: "OpenCode (.opencode Project)",
         path: platformPath.join(project, ".opencode", "opencode.json"),
-        format: "jsonc"
+        format: "jsonc",
+        scope: "project",
+        precedence: 22,
+        workspaceDir: project
       },
       {
         clientId: "opencode",
         displayName: "OpenCode (.opencode Project JSONC)",
         path: platformPath.join(project, ".opencode", "opencode.jsonc"),
-        format: "jsonc"
+        format: "jsonc",
+        scope: "project",
+        precedence: 23,
+        workspaceDir: project
       }
     );
   }
@@ -193,7 +284,9 @@ async function defaultCandidates(
     .map((entry) => entry.candidate);
   const seen = new Set<string>();
   return [...primaryCandidates, ...existingOptional].filter((candidate) => {
-    const key = `${candidate.clientId}:${candidate.path.toLowerCase()}`;
+    const candidatePath =
+      platform === "win32" ? candidate.path.toLowerCase() : candidate.path;
+    const key = `${candidate.clientId}:${candidatePath}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -227,12 +320,19 @@ function normalizeArgs(input: unknown): string[] {
   return input.filter((value): value is string => typeof value === "string");
 }
 
-function stringRecord(input: unknown): Record<string, string> | undefined {
+function stringRecord(
+  input: unknown,
+  options: { coerceNumbers?: boolean } = {}
+): Record<string, string> | undefined {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     return undefined;
   }
-  const entries = Object.entries(input).filter(
-    (entry): entry is [string, string] => typeof entry[1] === "string"
+  const entries = Object.entries(input).flatMap(([key, value]) =>
+    typeof value === "string"
+      ? [[key, value] as [string, string]]
+      : options.coerceNumbers && typeof value === "number" && Number.isFinite(value)
+        ? [[key, String(value)] as [string, string]]
+        : []
   );
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
@@ -253,6 +353,90 @@ function stringList(input: unknown): string[] {
   });
 }
 
+interface SchemaIssue {
+  serverName?: string;
+}
+
+function rawServerContainer(
+  parsed: Record<string, unknown>,
+  candidate: ConfigCandidate
+): unknown {
+  const mcp =
+    parsed.mcp && typeof parsed.mcp === "object" && !Array.isArray(parsed.mcp)
+      ? (parsed.mcp as Record<string, unknown>)
+      : undefined;
+  return (
+    parsed.mcpServers ??
+    parsed.mcp_servers ??
+    mcp?.servers ??
+    (candidate.clientId === "opencode" ? mcp : undefined) ??
+    parsed.servers
+  );
+}
+
+function validateClientSchema(
+  parsed: Record<string, unknown>,
+  candidate: ConfigCandidate
+): SchemaIssue[] {
+  const raw = rawServerContainer(parsed, candidate);
+  if (raw === undefined) return [];
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [{}];
+
+  const issues: SchemaIssue[] = [];
+  const openCodeV2 =
+    candidate.clientId === "opencode" &&
+    parsed.mcp !== null &&
+    typeof parsed.mcp === "object" &&
+    !Array.isArray(parsed.mcp) &&
+    (parsed.mcp as Record<string, unknown>).servers === raw;
+
+  for (const [serverName, value] of Object.entries(
+    raw as Record<string, unknown>
+  )) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      issues.push({ serverName });
+      continue;
+    }
+    const definition = value as Record<string, unknown>;
+    const type =
+      typeof definition.type === "string"
+        ? definition.type.toLowerCase()
+        : undefined;
+    const hasCommand =
+      typeof definition.command === "string" ||
+      (Array.isArray(definition.command) &&
+        typeof definition.command[0] === "string" &&
+        definition.command[0].length > 0);
+    const hasUrl =
+      typeof definition.url === "string" ||
+      typeof definition.httpUrl === "string" ||
+      typeof definition.http_url === "string";
+
+    if (openCodeV2) {
+      if (
+        (type !== "local" && type !== "remote") ||
+        (type === "local" &&
+          (!Array.isArray(definition.command) || !hasCommand || hasUrl)) ||
+        (type === "remote" && (!hasUrl || hasCommand))
+      ) {
+        issues.push({ serverName });
+      }
+      continue;
+    }
+
+    if (candidate.clientId === "vscode" && type) {
+      if (
+        !["stdio", "http", "sse"].includes(type) ||
+        (type === "stdio" && (!hasCommand || hasUrl)) ||
+        ((type === "http" || type === "sse") && (!hasUrl || hasCommand))
+      ) {
+        issues.push({ serverName });
+      }
+    }
+  }
+  return issues;
+}
+
 function extractServers(
   parsed: Record<string, unknown>,
   candidate: ConfigCandidate
@@ -266,12 +450,7 @@ function extractServers(
     candidate.clientId === "gemini" && Array.isArray(mcp?.excluded)
       ? normalizeArgs(mcp.excluded)
       : [];
-  const raw =
-    parsed.mcpServers ??
-    parsed.mcp_servers ??
-    mcp?.servers ??
-    (candidate.clientId === "opencode" ? mcp : undefined) ??
-    parsed.servers;
+  const raw = rawServerContainer(parsed, candidate);
 
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
 
@@ -286,7 +465,9 @@ function extractServers(
     const explicitEnvironment =
       candidate.clientId === "opencode"
         ? stringRecord(definition.environment) ?? stringRecord(definition.env)
-        : stringRecord(definition.env);
+        : stringRecord(definition.env, {
+            coerceNumbers: candidate.clientId === "vscode"
+          });
     const inheritEnvKeys =
       candidate.clientId === "codex" ? stringList(definition.env_vars) : [];
     const headerEnv =
@@ -355,10 +536,11 @@ function extractServers(
             : "generic";
     const candidateParent = path.dirname(candidate.path);
     const workspaceDir =
-      candidate.clientId === "vscode" &&
+      candidate.workspaceDir ??
+      (candidate.clientId === "vscode" &&
       path.basename(candidateParent).toLowerCase() === ".vscode"
         ? path.dirname(candidateParent)
-        : undefined;
+        : undefined);
     const variableValues = [
       ...(typeof definition.command === "string"
         ? [definition.command]
@@ -370,7 +552,7 @@ function extractServers(
       ...Object.values(explicitEnvironment ?? {}),
       ...Object.values(headers ?? {})
     ].filter((entry): entry is string => typeof entry === "string");
-    const unresolvedVariables =
+    const clientManagedVariables =
       candidate.clientId === "vscode"
         ? [
             ...new Set([
@@ -396,6 +578,12 @@ function extractServers(
             ])
           ]
         : [];
+    const unsupportedUrl =
+      candidate.clientId === "vscode" &&
+      typeof standardUrl === "string" &&
+      /^(?:unix|pipe):\/\//i.test(standardUrl)
+        ? standardUrl.split(":", 1)[0].toLowerCase()
+        : undefined;
     const envKeys = [
       ...Object.keys(explicitEnvironment ?? {}),
       ...inheritEnvKeys,
@@ -427,7 +615,14 @@ function extractServers(
       transport,
       variableSyntax,
       workspaceDir,
-      unresolvedVariables,
+      unresolvedVariables: [],
+      clientManagedVariables,
+      probeUnsupportedReason:
+        clientManagedVariables.length > 0
+          ? `Client-managed values require VS Code: ${clientManagedVariables.join(", ")}`
+          : unsupportedUrl
+            ? `${unsupportedUrl} socket transports must be tested by VS Code.`
+            : candidate.probeUnsupportedReason,
       repairCompatible: candidate.clientId !== "opencode"
     };
   });
@@ -468,7 +663,9 @@ export async function scanMcpConfigurations(
       parseable: true,
       serverCount: 0,
       servers: [],
-      findings
+      findings,
+      scope: candidate.scope,
+      precedence: candidate.precedence
     };
 
     if (!found) {
@@ -489,9 +686,11 @@ export async function scanMcpConfigurations(
       continue;
     }
 
+    let rawContent: string;
     let content: string;
     try {
-      content = (await readFile(candidate.path, "utf8")).replace(/^\uFEFF/, "");
+      rawContent = await readFile(candidate.path, "utf8");
+      content = rawContent.replace(/^\uFEFF/, "");
     } catch {
       base.parseable = false;
       findings.push(
@@ -540,6 +739,28 @@ export async function scanMcpConfigurations(
       continue;
     }
 
+    const schemaIssues = validateClientSchema(parsed, candidate);
+    for (const issue of schemaIssues) {
+      findings.push(
+        makeFinding(
+          candidate,
+          {
+            id: `${candidate.clientId}:${issue.serverName ?? "configuration"}:schema-invalid`,
+            serverName: issue.serverName,
+            severity: "error",
+            titleKey: "scan.schemaInvalid.title",
+            detailKey: "scan.schemaInvalid.detail",
+            detailParams: {
+              server: issue.serverName ?? candidate.displayName
+            }
+          },
+          configScope
+        )
+      );
+    }
+    const invalidServerNames = new Set(
+      schemaIssues.flatMap((issue) => issue.serverName ?? [])
+    );
     const servers = extractServers(parsed, candidate);
     base.servers = servers.map((server) =>
       options.includeSensitive
@@ -554,6 +775,7 @@ export async function scanMcpConfigurations(
 
     for (const server of servers) {
       if (server.enabled === false) continue;
+      if (invalidServerNames.has(server.name)) continue;
 
       if ((server.unresolvedVariables?.length ?? 0) > 0) {
         findings.push(
@@ -663,7 +885,11 @@ export async function scanMcpConfigurations(
               server.workspaceDir
             )
           );
-          if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+          const allowedProtocols =
+            candidate.clientId === "vscode"
+              ? ["http:", "https:", "unix:", "pipe:"]
+              : ["http:", "https:"];
+          if (!allowedProtocols.includes(parsedUrl.protocol)) {
             throw new Error("Unsupported protocol");
           }
         } catch {
@@ -722,7 +948,7 @@ export async function scanMcpConfigurations(
             command: "cmd",
             args: ["/d", "/s", "/c", "npx", ...server.args]
           },
-          expectedHash: hashText(content)
+          expectedHash: hashText(rawContent)
         });
       }
     }

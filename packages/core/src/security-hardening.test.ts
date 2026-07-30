@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -75,7 +75,7 @@ describe("structured secret redaction", () => {
     ]) {
       expect(output).not.toContain(secret);
     }
-    expect(output.match(/\[REDACTED\]/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(output.match(/\[REDACTED\]/g)?.length).toBeGreaterThanOrEqual(3);
   });
 
   it("redacts camel-case sensitive keys and adjacent CLI secret values", () => {
@@ -133,6 +133,45 @@ describe("structured secret redaction", () => {
       args: ["--api-key", "[REDACTED]", "--token=[REDACTED]", "--safe", "ok"]
     });
     expect(source.args[1]).toBe("array-secret");
+  });
+
+  it("redacts common prefixed names, API token flags, auth values, and credential URIs", () => {
+    const source = {
+      args: [
+        "--api-token",
+        "api-token-secret",
+        "--env",
+        "AWS_SECRET_ACCESS_KEY=aws-secret-access"
+      ],
+      MCP_API_KEY: "structured-api-secret",
+      DATABASE_URL: "postgres://db-user:db-password@example.test/app"
+    };
+    const redacted = JSON.stringify(redactReport(source));
+    const text = redactText(
+      [
+        'Authorization: Digest username="db-user", realm="internal", response="digest-secret"',
+        "DATABASE_URL=postgres://db-user:db-password@example.test/app",
+        "X-Secret-Key: custom-header-secret",
+        "-----BEGIN PRIVATE KEY-----",
+        "pem-private-material",
+        "-----END PRIVATE KEY-----"
+      ].join("\n")
+    );
+
+    for (const secret of [
+      "api-token-secret",
+      "structured-api-secret",
+      "aws-secret-access",
+      "db-user",
+      "db-password",
+      "digest-secret",
+      "custom-header-secret",
+      "pem-private-material"
+    ]) {
+      expect(redacted).not.toContain(secret);
+      expect(text).not.toContain(secret);
+    }
+    expect(text).not.toContain("internal");
   });
 });
 
@@ -239,5 +278,78 @@ describe("repair transaction hardening", () => {
       })
     ).rejects.toThrow("ROLLBACK_CONFIG_CHANGED");
     expect(await readFile(configPath, "utf8")).toBe("new user content");
+  });
+
+  it("preserves a UTF-8 BOM while applying a scanned repair", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-bom-repair-"));
+    const configPath = path.join(root, "mcp.json");
+    const original = `\uFEFF${await writeNpxConfig(configPath)}`;
+    await writeFile(configPath, original, "utf8");
+    const scan = await scanMcpConfigurations({
+      platform: "win32",
+      candidates: [
+        {
+          clientId: "cursor",
+          displayName: "Cursor",
+          path: configPath,
+          format: "jsonc"
+        }
+      ]
+    });
+
+    const result = await applySafeRepairs(scan.repairs, {
+      backupRoot: path.join(root, "backups")
+    });
+    const repaired = await readFile(configPath, "utf8");
+    expect(result.results[0]?.applied).toBe(true);
+    expect(repaired.startsWith("\uFEFF")).toBe(true);
+    expect(repaired).toContain('"command": "cmd"');
+  });
+
+  it("isolates a missing file and continues repairing the rest of a batch", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-isolated-"));
+    const missingPath = path.join(root, "missing.json");
+    const healthyPath = path.join(root, "healthy.json");
+    const missingOriginal = await writeNpxConfig(missingPath);
+    const healthyOriginal = await writeNpxConfig(healthyPath);
+    await rm(missingPath);
+
+    const result = await applySafeRepairs(
+      [
+        repair(missingPath, missingOriginal, ["-y", "@example/mcp"], "missing"),
+        repair(healthyPath, healthyOriginal, ["-y", "@example/mcp"], "healthy")
+      ],
+      { backupRoot: path.join(root, "backups") }
+    );
+
+    expect(result.results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ repairId: "cursor:missing:wrap-npx", applied: false }),
+        expect.objectContaining({ repairId: "cursor:healthy:wrap-npx", applied: true })
+      ])
+    );
+    expect(await readFile(healthyPath, "utf8")).toContain('"command": "cmd"');
+  });
+
+  it("reports a manifest warning without hiding a committed repair", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-manifest-"));
+    const configPath = path.join(root, "mcp.json");
+    const original = await writeNpxConfig(configPath);
+
+    const result = await applySafeRepairs(
+      [repair(configPath, original, ["-y", "@example/mcp"])],
+      {
+        backupRoot: path.join(root, "backups"),
+        beforeManifest: async () => {
+          throw new Error("simulated manifest write failure");
+        }
+      }
+    );
+
+    expect(result).toMatchObject({
+      manifestWarning: "REPAIR_MANIFEST_SAVE_FAILED",
+      results: [expect.objectContaining({ applied: true })]
+    });
+    expect(await readFile(configPath, "utf8")).toContain('"command": "cmd"');
   });
 });

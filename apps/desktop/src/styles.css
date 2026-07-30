@@ -113,6 +113,13 @@ select {
   background: var(--panel-strong);
 }
 
+select:focus-visible,
+.button:focus-visible,
+.icon-button:focus-visible {
+  outline: 3px solid rgba(80, 230, 208, 0.72);
+  outline-offset: 2px;
+}
+
 main {
   width: min(1120px, calc(100% - 56px));
   margin: 0 auto;
@@ -654,5 +661,16 @@ dialog::backdrop {
   dialog {
     width: calc(100vw - 24px);
     padding: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

@@ -114,6 +114,7 @@ export async function applySafeRepairs(
   options: {
     backupRoot?: string;
     beforeCommit?: (configPath: string) => Promise<void>;
+    beforeManifest?: () => Promise<void>;
   } = {}
 ): Promise<RepairBatchResult> {
   const transactionId = `${new Date().toISOString().replace(/[:.]/g, "-")}-${randomUUID().slice(0, 8)}`;
@@ -139,7 +140,20 @@ export async function applySafeRepairs(
   }
 
   for (const { configPath, repairs: fileRepairs } of grouped.values()) {
-    const original = await readFile(configPath, "utf8");
+    let original: string;
+    try {
+      original = await readFile(configPath, "utf8");
+    } catch {
+      for (const repair of fileRepairs) {
+        results.push({
+          repairId: repair.id,
+          applied: false,
+          configPath,
+          messageKey: "repair.failed"
+        });
+      }
+      continue;
+    }
     const hashMatched = fileRepairs.filter(
       (repair) =>
         repair.risk === "safe" && repair.expectedHash === hashText(original)
@@ -174,23 +188,38 @@ export async function applySafeRepairs(
       transactionDir,
       backupName(configPath, allowed[0].clientId)
     );
-    const originalMode = (await stat(configPath)).mode;
-    await writeFile(backupPath, original, {
-      encoding: "utf8",
-      flag: "wx",
-      mode: originalMode
-    });
+    let originalMode: number;
+    try {
+      originalMode = (await stat(configPath)).mode;
+      await writeFile(backupPath, original, {
+        encoding: "utf8",
+        flag: "wx",
+        mode: originalMode
+      });
+    } catch {
+      for (const repair of allowed) {
+        results.push({
+          repairId: repair.id,
+          applied: false,
+          configPath,
+          messageKey: "repair.failed"
+        });
+      }
+      continue;
+    }
 
-    let updated = original;
+    const bom = original.startsWith("\uFEFF") ? "\uFEFF" : "";
+    let updated = original.replace(/^\uFEFF/, "");
     const tempPath = `${configPath}.mcpmender-${transactionId}-${randomUUID()}.tmp`;
     let committed = false;
     try {
       for (const repair of allowed) {
         updated = applyRepairToJsonc(updated, repair);
       }
+      updated = `${bom}${updated}`;
 
       const errors: ParseError[] = [];
-      parse(updated, errors, {
+      parse(updated.replace(/^\uFEFF/, ""), errors, {
         allowTrailingComma: true,
         disallowComments: false
       });
@@ -248,22 +277,32 @@ export async function applySafeRepairs(
     }
   }
 
-  await writeFile(
-    path.join(transactionDir, "manifest.json"),
-    JSON.stringify(
-      {
-        schemaVersion: 1,
-        transactionId,
-        createdAt: new Date().toISOString(),
-        files: [...new Set(results.flatMap((result) => result.backupPath ?? []))]
-      },
-      null,
-      2
-    ),
-    "utf8"
-  );
-
-  return { transactionId, results };
+  try {
+    await options.beforeManifest?.();
+    await writeFile(
+      path.join(transactionDir, "manifest.json"),
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          transactionId,
+          createdAt: new Date().toISOString(),
+          files: [
+            ...new Set(results.flatMap((result) => result.backupPath ?? []))
+          ]
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+    return { transactionId, results };
+  } catch {
+    return {
+      transactionId,
+      results,
+      manifestWarning: "REPAIR_MANIFEST_SAVE_FAILED"
+    };
+  }
 }
 
 export async function rollbackRepair(

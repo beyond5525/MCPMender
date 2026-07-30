@@ -105,6 +105,15 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $stageDirectory "MCPMender.exe") -PathType Leaf)) {
             throw "Windows archive staging directory is missing MCPMender.exe."
           }
+          @"
+          This GitHub Actions Windows artifact is intentionally UNSIGNED.
+
+          The project does not keep a private code-signing key in the repository
+          or GitHub Actions. Do not describe this CI artifact as self-signed.
+          A signed community build must be produced by the reviewed local release
+          process and uploaded manually with its public certificate, thumbprint,
+          checksums, release notes, and SBOM.
+          "@ | Set-Content -LiteralPath (Join-Path $stageDirectory "UNSIGNED-WINDOWS-BUILD.txt") -Encoding utf8
           $zipPath = Join-Path $releaseRoot "MCPMender-Windows-x64.zip"
           if (Test-Path -LiteralPath $zipPath) {
             Remove-Item -LiteralPath $zipPath -Force
@@ -142,20 +151,71 @@ jobs:
       - name: Smoke-test Linux package
         if: matrix.platform == 'linux'
         run: |
-          executable="apps/desktop/release/linux-unpacked/mcpmender"
-          for target in main help; do
-            capture_path="$RUNNER_TEMP/mcpmender-linux-$target.png"
-            data_dir="$RUNNER_TEMP/mcpmender-linux-$target-data"
-            temp_dir="$RUNNER_TEMP/mcpmender-linux-$target-temp"
-            mkdir -p "$data_dir" "$temp_dir"
-            if [ "$target" = help ]; then
-              MCPMENDER_CAPTURE_TARGET=help MCPMENDER_CAPTURE_PATH="$capture_path" MCPMENDER_DATA_DIR="$data_dir" \
-                TMPDIR="$temp_dir" timeout 45s xvfb-run -a "$executable"
-            else
-              MCPMENDER_CAPTURE_PATH="$capture_path" MCPMENDER_DATA_DIR="$data_dir" \
-                TMPDIR="$temp_dir" timeout 45s xvfb-run -a "$executable"
-            fi
-            node - "$capture_path" <<'NODE'
+          mapfile -t appimages < <(find apps/desktop/release -maxdepth 1 -type f -name 'MCPMender-*-Linux-*.AppImage' -print)
+          mapfile -t linux_archives < <(find apps/desktop/release -maxdepth 1 -type f -name 'MCPMender-*-Linux-*.tar.gz' -print)
+          test "${#appimages[@]}" -eq 1
+          test "${#linux_archives[@]}" -eq 1
+          chmod +x "${appimages[0]}"
+
+          extract_dir="$RUNNER_TEMP/mcpmender-linux-tar"
+          mkdir -p "$extract_dir"
+          tar -xzf "${linux_archives[0]}" -C "$extract_dir"
+          mapfile -t extracted_executables < <(find "$extract_dir" -mindepth 2 -type f -name mcpmender -perm -u+x -print)
+          test "${#extracted_executables[@]}" -eq 1
+
+          packaged_targets=("appimage:${appimages[0]}" "tar:${extracted_executables[0]}")
+          for packaged_target in "${packaged_targets[@]}"; do
+            package_kind="${packaged_target%%:*}"
+            executable="${packaged_target#*:}"
+            for target in main help; do
+              capture_path="$RUNNER_TEMP/mcpmender-linux-$package_kind-$target.png"
+              data_dir="$RUNNER_TEMP/mcpmender-linux-$package_kind-$target-data"
+              temp_dir="$RUNNER_TEMP/mcpmender-linux-$package_kind-$target-temp"
+              launch_log="$RUNNER_TEMP/mcpmender-linux-$package_kind-$target.log"
+              residual_log="$RUNNER_TEMP/mcpmender-linux-$package_kind-$target-residual.log"
+              mkdir -p "$data_dir" "$temp_dir"
+              launch_environment=(
+                "MCPMENDER_CAPTURE_PATH=$capture_path"
+                "MCPMENDER_DATA_DIR=$data_dir"
+                "TMPDIR=$temp_dir"
+              )
+              if [ "$target" = help ]; then
+                launch_environment+=("MCPMENDER_CAPTURE_TARGET=help")
+              fi
+
+              if [ "$package_kind" = appimage ]; then
+                # Prefer the same AppImage mount path users run. Hosted Linux
+                # runners do not always expose FUSE; only that known platform
+                # limitation permits the explicit extraction fallback.
+                set +e
+                env "${launch_environment[@]}" timeout 45s xvfb-run -a "$executable" >"$launch_log" 2>&1
+                launch_status=$?
+                set -e
+                if [ "$launch_status" -ne 0 ]; then
+                  if grep -Eqi 'fuse|fusermount|cannot mount appimage|appimages require fuse' "$launch_log"; then
+                    echo "Standard AppImage launch unavailable because FUSE is not usable; validating the same final AppImage with APPIMAGE_EXTRACT_AND_RUN=1."
+                    cat "$launch_log"
+                    env APPIMAGE_EXTRACT_AND_RUN=1 "${launch_environment[@]}" \
+                      timeout 45s xvfb-run -a "$executable"
+                  else
+                    cat "$launch_log"
+                    exit "$launch_status"
+                  fi
+                else
+                  cat "$launch_log"
+                fi
+              else
+                env "${launch_environment[@]}" timeout 45s xvfb-run -a "$executable"
+              fi
+
+              sleep 2
+              if pgrep -af '[m]cpmender|[M]CPMender' >"$residual_log"; then
+                echo "MCPMender left Linux processes running after $package_kind/$target smoke capture:" >&2
+                cat "$residual_log" >&2
+                exit 1
+              fi
+
+              node - "$capture_path" <<'NODE'
           const fs = require("node:fs");
           const zlib = require("node:zlib");
           const path = process.argv[2];
@@ -192,16 +252,8 @@ jobs:
           if (colors.size < 8) throw new Error(`visually blank capture: ${colors.size} sampled colors`);
           console.log(`${path}: ${width}x${height}, ${colors.size} sampled colors`);
           NODE
+            done
           done
-          mapfile -t linux_archives < <(find apps/desktop/release -maxdepth 1 -type f -name 'MCPMender-*-Linux-*.tar.gz' -print)
-          test "${#linux_archives[@]}" -eq 1
-          archive="${linux_archives[0]}"
-          extract_dir="$RUNNER_TEMP/mcpmender-linux-tar"
-          mkdir -p "$extract_dir"
-          tar -xzf "$archive" -C "$extract_dir"
-          mapfile -t extracted_executables < <(find "$extract_dir" -mindepth 2 -type f -name mcpmender -perm -u+x -print)
-          test "${#extracted_executables[@]}" -eq 1
-          test -x "${extracted_executables[0]}"
 
       - name: Create Linux checksums
         if: matrix.platform == 'linux'
@@ -218,17 +270,77 @@ jobs:
       - name: Smoke-test macOS package
         if: matrix.platform == 'macos'
         run: |
-          executable="$(find apps/desktop/release -path '*/MCPMender.app/Contents/MacOS/MCPMender' -type f -print -quit)"
-          test -n "$executable"
+          shopt -s nullglob
+          zip_files=(apps/desktop/release/MCPMender-*-macOS-*.zip)
+          dmg_files=(apps/desktop/release/MCPMender-*-macOS-*.dmg)
+          test "${#zip_files[@]}" -eq 1
+          test "${#dmg_files[@]}" -eq 1
+          zip_path="${zip_files[0]}"
+          dmg_path="${dmg_files[0]}"
+
+          zip_extract_dir="$RUNNER_TEMP/mcpmender-macos-zip"
+          rm -rf "$zip_extract_dir"
+          mkdir -p "$zip_extract_dir"
+          ditto -x -k "$zip_path" "$zip_extract_dir"
+          app_bundle="$(find "$zip_extract_dir" -type d -name MCPMender.app -print -quit)"
+          test -n "$app_bundle"
+          executable="$app_bundle/Contents/MacOS/MCPMender"
+          test -x "$executable"
+          codesign --verify --deep --strict --verbose=2 "$app_bundle"
+
+          dmg_mount_dir="$RUNNER_TEMP/mcpmender-macos-dmg"
+          rm -rf "$dmg_mount_dir"
+          mkdir -p "$dmg_mount_dir"
+          dmg_attached=false
+          cleanup_dmg() {
+            if [ "$dmg_attached" = true ]; then
+              hdiutil detach "$dmg_mount_dir" -force || true
+            fi
+          }
+          trap cleanup_dmg EXIT
+          hdiutil attach "$dmg_path" -nobrowse -readonly -mountpoint "$dmg_mount_dir"
+          dmg_attached=true
+          dmg_app_bundle="$(find "$dmg_mount_dir" -type d -name MCPMender.app -print -quit)"
+          test -n "$dmg_app_bundle"
+          test -x "$dmg_app_bundle/Contents/MacOS/MCPMender"
+          codesign --verify --deep --strict --verbose=2 "$dmg_app_bundle"
+          hdiutil detach "$dmg_mount_dir"
+          dmg_attached=false
+          trap - EXIT
+
           for target in main help; do
-            capture_path="$RUNNER_TEMP/mcpmender-macos-$target.png"
-            data_dir="$RUNNER_TEMP/mcpmender-macos-$target-data"
-            temp_dir="$RUNNER_TEMP/mcpmender-macos-$target-temp"
+            capture_path="$RUNNER_TEMP/mcpmender-macos-zip-$target.png"
+            data_dir="$RUNNER_TEMP/mcpmender-macos-zip-$target-data"
+            temp_dir="$RUNNER_TEMP/mcpmender-macos-zip-$target-temp"
+            residual_log="$RUNNER_TEMP/mcpmender-macos-zip-$target-residual.log"
             mkdir -p "$data_dir" "$temp_dir"
-            if [ "$target" = help ]; then
-              MCPMENDER_CAPTURE_TARGET=help MCPMENDER_CAPTURE_PATH="$capture_path" MCPMENDER_DATA_DIR="$data_dir" TMPDIR="$temp_dir" "$executable"
+            node - "$executable" "$target" "$capture_path" "$data_dir" "$temp_dir" <<'NODE'
+          const { spawnSync } = require("node:child_process");
+          const [executable, target, capturePath, dataDir, tempDir] = process.argv.slice(2);
+          const env = {
+            ...process.env,
+            MCPMENDER_CAPTURE_PATH: capturePath,
+            MCPMENDER_DATA_DIR: dataDir,
+            TMPDIR: tempDir
+          };
+          if (target === "help") env.MCPMENDER_CAPTURE_TARGET = "help";
+          const result = spawnSync(executable, [], {
+            env,
+            stdio: "inherit",
+            timeout: 45000
+          });
+          if (result.error) throw result.error;
+          if (result.status !== 0) {
+            throw new Error(`MCPMender exited with status ${result.status}`);
+          }
+          NODE
+            sleep 2
+            if pgrep -fl '[M]CPMender|[m]cpmender' >"$residual_log"; then
+              echo "MCPMender left macOS processes running after ZIP/$target smoke capture:" >&2
+              cat "$residual_log" >&2
+              exit 1
             else
-              MCPMENDER_CAPTURE_PATH="$capture_path" MCPMENDER_DATA_DIR="$data_dir" TMPDIR="$temp_dir" "$executable"
+              rm -f "$residual_log"
             fi
             node - "$capture_path" <<'NODE'
           const fs = require("node:fs");
@@ -268,7 +380,6 @@ jobs:
           console.log(`${path}: ${width}x${height}, ${colors.size} sampled colors`);
           NODE
           done
-          codesign --verify --deep --strict --verbose=2 "$(dirname "$(dirname "$(dirname "$executable")")")"
 
       - name: Create macOS checksums
         if: matrix.platform == 'macos'
@@ -395,26 +506,3 @@ jobs:
             ${{ runner.temp }}/MCPMender.cdx.json
             ${{ runner.temp }}/THIRD_PARTY_NOTICES.md
           if-no-files-found: error
-
-  github-release:
-    name: Publish GitHub prerelease
-    if: github.ref_type == 'tag'
-    needs: [desktop, cli]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download validated artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Create prerelease and upload artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --repo "$GITHUB_REPOSITORY" \
-            --prerelease \
-            --generate-notes \
-            artifacts/*/*

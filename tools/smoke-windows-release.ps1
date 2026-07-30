@@ -4,7 +4,7 @@ param(
     [ValidateNotNullOrEmpty()]
     [string]$ExecutablePath,
 
-    [string]$CapturePath = "F:\GemeHuanJing\MCPMenderTools\temp\mcpmender-release-smoke.png",
+    [string]$CapturePath,
 
     [ValidateSet("main", "help")]
     [string]$CaptureTarget = "main",
@@ -40,6 +40,9 @@ function Get-TargetProcessIds {
     return @($ids)
 }
 
+if ([string]::IsNullOrWhiteSpace($CapturePath)) {
+    $CapturePath = Join-Path ([System.IO.Path]::GetTempPath()) "mcpmender-release-smoke.png"
+}
 $resolvedCapture = [System.IO.Path]::GetFullPath($CapturePath)
 $captureDirectory = Split-Path -Parent $resolvedCapture
 New-Item -ItemType Directory -Force -Path $captureDirectory | Out-Null

@@ -19,32 +19,53 @@ const licenseGroups = JSON.parse(
 const components = [];
 const seen = new Set();
 
+function addComponent(name, version, license, homepage) {
+  const key = `${name}@${version}`;
+  if (seen.has(key)) return;
+  seen.add(key);
+  const encodedName = name.startsWith("@")
+    ? name
+        .split("/")
+        .map((part) => encodeURIComponent(part))
+        .join("/")
+    : encodeURIComponent(name);
+  components.push({
+    type: "library",
+    "bom-ref": `pkg:npm/${encodedName}@${version}`,
+    name,
+    version,
+    licenses: [{ license: { id: license } }],
+    purl: `pkg:npm/${encodedName}@${version}`,
+    externalReferences: homepage
+      ? [{ type: "website", url: homepage }]
+      : undefined
+  });
+}
+
 for (const [license, packages] of Object.entries(licenseGroups)) {
   for (const item of packages) {
     for (const version of item.versions) {
-      const key = `${item.name}@${version}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const encodedName = item.name.startsWith("@")
-        ? item.name
-            .split("/")
-            .map((part) => encodeURIComponent(part))
-            .join("/")
-        : encodeURIComponent(item.name);
-      components.push({
-        type: "library",
-        "bom-ref": `pkg:npm/${encodedName}@${version}`,
-        name: item.name,
-        version,
-        licenses: [{ license: { id: license } }],
-        purl: `pkg:npm/${encodedName}@${version}`,
-        externalReferences: item.homepage
-          ? [{ type: "website", url: item.homepage }]
-          : undefined
-      });
+      addComponent(item.name, version, license, item.homepage);
     }
   }
 }
+
+// Electron is installed as a build-time dependency, but its runtime and Chromium
+// are shipped in every Desktop artifact. Production-only package inventories do
+// not report it, so add the exact bundled Electron version explicitly.
+const desktopManifest = JSON.parse(
+  await readFile(path.resolve("apps/desktop/package.json"), "utf8")
+);
+const electronVersion = desktopManifest.devDependencies?.electron;
+if (!electronVersion || !/^\d+\.\d+\.\d+/.test(electronVersion)) {
+  throw new Error("Desktop manifest does not contain an exact Electron version");
+}
+addComponent(
+  "electron",
+  electronVersion,
+  "MIT",
+  "https://github.com/electron/electron"
+);
 components.sort((left, right) =>
   `${left.name}@${left.version}`.localeCompare(`${right.name}@${right.version}`)
 );

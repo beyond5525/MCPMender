@@ -47,7 +47,9 @@ function classifyFailure(
   const normalized = detail.toLowerCase();
   const status =
     normalized.includes("401") ||
+    normalized.includes("403") ||
     normalized.includes("unauthorized") ||
+    normalized.includes("forbidden") ||
     normalized.includes("authorization required")
       ? "auth-required"
       : normalized.includes("timeout") ||
@@ -160,9 +162,119 @@ function mergeHeaders(
   return headers;
 }
 
+function combinedProbeSignal(
+  timeoutMs: number,
+  startedAt: number,
+  externalSignal?: AbortSignal
+): { signal: AbortSignal; timeout: number } {
+  const timeout = Math.max(1, timeoutMs - (Date.now() - startedAt));
+  const timeoutSignal = AbortSignal.timeout(timeout);
+  return {
+    signal: externalSignal
+      ? AbortSignal.any([externalSignal, timeoutSignal])
+      : timeoutSignal,
+    timeout
+  };
+}
+
+function shouldFallbackToSse(error: unknown, signal?: AbortSignal): boolean {
+  if (signal?.aborted) return false;
+  const detail = safeDetail(error).toLowerCase();
+  if (
+    detail.includes("401") ||
+    detail.includes("403") ||
+    detail.includes("unauthorized") ||
+    detail.includes("forbidden") ||
+    detail.includes("timeout") ||
+    detail.includes("timed out") ||
+    detail.includes("aborted")
+  ) {
+    return false;
+  }
+  return [
+    "404",
+    "405",
+    "406",
+    "415",
+    "method not allowed",
+    "not acceptable",
+    "unsupported content-type",
+    "invalid content-type",
+    "unexpected content",
+    "protocol error",
+    "connection closed"
+  ].some((marker) => detail.includes(marker));
+}
+
+async function inspectConnectedTransport(
+  target: ProbeTarget,
+  transport:
+    | StdioClientTransport
+    | StreamableHTTPClientTransport
+    | SSEClientTransport,
+  timeoutMs: number,
+  startedAt: number,
+  externalSignal?: AbortSignal
+): Promise<ProbeResult> {
+  const client = new Client(
+    { name: "mcpmender-diagnostics", version: "0.3.0-beta.3" },
+    { capabilities: {} }
+  );
+  const connect = combinedProbeSignal(timeoutMs, startedAt, externalSignal);
+  await client.connect(transport, {
+    signal: connect.signal,
+    timeout: connect.timeout,
+    maxTotalTimeout: connect.timeout
+  });
+
+  let toolCount: number | undefined;
+  if (client.getServerCapabilities()?.tools) {
+    toolCount = 0;
+    let cursor: string | undefined;
+    do {
+      const request = combinedProbeSignal(timeoutMs, startedAt, externalSignal);
+      const listed = await client.listTools(
+        cursor ? { cursor } : undefined,
+        {
+          signal: request.signal,
+          timeout: request.timeout,
+          maxTotalTimeout: request.timeout
+        }
+      );
+      toolCount += listed.tools.length;
+      cursor = listed.nextCursor;
+    } while (cursor);
+  }
+
+  const implementation = client.getServerVersion();
+  const result: ProbeResult = {
+    clientId: target.clientId,
+    clientName: target.clientName,
+    configPath: target.configPath,
+    serverName: target.server.name,
+    transport: targetTransport(target),
+    status: "connected",
+    durationMs: Date.now() - startedAt,
+    serverNameReported: implementation?.name,
+    serverVersion: implementation?.version,
+    toolCount,
+    messageKey: "probe.connected"
+  };
+  const closeBudget = Math.min(
+    500,
+    Math.max(1, timeoutMs - (Date.now() - startedAt))
+  );
+  await Promise.race([
+    client.close().catch(() => undefined),
+    new Promise<void>((resolve) => setTimeout(resolve, closeBudget))
+  ]);
+  return result;
+}
+
 async function probeTarget(
   target: ProbeTarget,
-  timeoutMs: number
+  timeoutMs: number,
+  externalSignal?: AbortSignal
 ): Promise<ProbeResult> {
   const startedAt = Date.now();
   const server = target.server;
@@ -172,6 +284,20 @@ async function probeTarget(
     | SSEClientTransport
     | undefined;
   let stderr = "";
+
+  if (server.probeUnsupportedReason) {
+    return {
+      clientId: target.clientId,
+      clientName: target.clientName,
+      configPath: target.configPath,
+      serverName: server.name,
+      transport: targetTransport(target),
+      status: "unsupported",
+      durationMs: 0,
+      messageKey: "probe.unsupported",
+      detail: server.probeUnsupportedReason
+    };
+  }
 
   if (!server.command && !server.url) {
     return {
@@ -267,6 +393,35 @@ async function probeTarget(
           requestInit:
             Object.keys(headers).length > 0 ? { headers } : undefined
         });
+        if (target.clientId === "vscode") {
+          try {
+            return await inspectConnectedTransport(
+              target,
+              transport,
+              timeoutMs,
+              startedAt,
+              externalSignal
+            );
+          } catch (error) {
+            await closeQuietly(transport);
+            transport = undefined;
+            if (!shouldFallbackToSse(error, externalSignal)) throw error;
+            transport = new SSEClientTransport(url, {
+              eventSourceInit:
+                Object.keys(headers).length > 0
+                  ? {
+                      fetch: (input, init) =>
+                        fetch(input, {
+                          ...init,
+                          headers: mergeHeaders(init.headers, headers)
+                        })
+                    }
+                  : undefined,
+              requestInit:
+                Object.keys(headers).length > 0 ? { headers } : undefined
+            });
+          }
+        }
       }
     } else {
       return {
@@ -282,45 +437,13 @@ async function probeTarget(
       };
     }
 
-    const client = new Client(
-      { name: "mcpmender-diagnostics", version: "0.3.0-beta.2" },
-      { capabilities: {} }
+    return await inspectConnectedTransport(
+      target,
+      transport,
+      timeoutMs,
+      startedAt,
+      externalSignal
     );
-    const signal = AbortSignal.timeout(timeoutMs);
-    await client.connect(transport, {
-      signal,
-      timeout: timeoutMs,
-      maxTotalTimeout: timeoutMs
-    });
-
-    let toolCount: number | undefined;
-    if (client.getServerCapabilities()?.tools) {
-      const remaining = Math.max(250, timeoutMs - (Date.now() - startedAt));
-      const listed = await client.listTools(undefined, {
-        signal,
-        timeout: remaining,
-        maxTotalTimeout: remaining
-      });
-      toolCount = listed.tools.length;
-    }
-
-    const implementation = client.getServerVersion();
-    const result: ProbeResult = {
-      clientId: target.clientId,
-      clientName: target.clientName,
-      configPath: target.configPath,
-      serverName: server.name,
-      transport: transportKind,
-      status: "connected",
-      durationMs: Date.now() - startedAt,
-      serverNameReported: implementation?.name,
-      serverVersion: implementation?.version,
-      toolCount,
-      messageKey: "probe.connected"
-    };
-    await client.close();
-    transport = undefined;
-    return result;
   } catch (error) {
     return classifyFailure(target, startedAt, error, stderr);
   } finally {
@@ -331,7 +454,7 @@ async function probeTarget(
 function eligibleProbeTargets(report: Awaited<
   ReturnType<typeof scanMcpConfigurations>
 >): ProbeTarget[] {
-  return report.clients.flatMap((client) =>
+  const candidates = report.clients.flatMap((client) =>
     client.parseable
       ? client.servers
           .filter(
@@ -347,6 +470,42 @@ function eligibleProbeTargets(report: Awaited<
           }))
       : []
   );
+  const effective = new Map<string, ProbeTarget & { precedence?: number }>();
+  for (const target of candidates) {
+    const source = report.clients.find(
+      (client) =>
+        client.clientId === target.clientId &&
+        client.configPath === target.configPath
+    );
+    const key = `${target.clientId}:${target.server.name}`;
+    const existing = effective.get(key);
+    if (source?.precedence === undefined) {
+      effective.set(`${key}:${target.configPath}`, {
+        ...target,
+        precedence: undefined
+      });
+      continue;
+    }
+    if (!existing) {
+      effective.set(key, { ...target, precedence: source.precedence });
+      continue;
+    }
+    const existingPrecedence = existing.precedence ?? -Infinity;
+    if (source.precedence > existingPrecedence) {
+      for (const candidateKey of effective.keys()) {
+        if (candidateKey === key || candidateKey.startsWith(`${key}:`)) {
+          effective.delete(candidateKey);
+        }
+      }
+      effective.set(key, { ...target, precedence: source.precedence });
+    } else if (source.precedence === existingPrecedence) {
+      effective.set(`${key}:${target.configPath}`, {
+        ...target,
+        precedence: source.precedence
+      });
+    }
+  }
+  return [...effective.values()].map(({ precedence: _precedence, ...target }) => target);
 }
 
 export async function loadProbeTargets(
@@ -410,8 +569,13 @@ export async function probeMcpTargets(
   await Promise.all(
     Array.from({ length: Math.min(concurrency, targets.length) }, async () => {
       while (nextIndex < targets.length) {
+        if (options.signal?.aborted) break;
         const index = nextIndex++;
-        results[index] = await probeTarget(targets[index], timeoutMs);
+        results[index] = await probeTarget(
+          targets[index],
+          timeoutMs,
+          options.signal
+        );
       }
     })
   );
@@ -444,6 +608,7 @@ export async function probeMcpConfigurations(
     timeoutMs: options.timeoutMs,
     concurrency: options.concurrency,
     serverNames: options.serverNames,
+    signal: options.signal,
     platform: options.scanOptions?.platform
   });
 }

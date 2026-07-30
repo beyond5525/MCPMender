@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
-    [string]$ReleaseDirectory = "H:\MCPulse\release\MCPMender",
-    [string]$ZipPath = "H:\MCPulse\release\MCPMender.zip"
+    [string]$ReleaseDirectory,
+    [string]$ZipPath,
+    [switch]$RequireAdjacentZipChecksum
 )
 
 $ErrorActionPreference = "Stop"
@@ -10,15 +11,17 @@ Set-StrictMode -Version Latest
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
+if ([string]::IsNullOrWhiteSpace($ReleaseDirectory)) {
+    $ReleaseDirectory = Join-Path $projectRoot "release\MCPMender"
+}
+if ([string]::IsNullOrWhiteSpace($ZipPath)) {
+    $ZipPath = Join-Path $projectRoot "release\MCPMender.zip"
+}
 $workspaceManifest = Get-Content -LiteralPath (Join-Path $projectRoot "package.json") -Raw | ConvertFrom-Json
 $expectedVersion = [string]$workspaceManifest.version
-$expectedReleaseDirectory = [System.IO.Path]::GetFullPath("H:\MCPulse\release\MCPMender")
 $resolvedReleaseDirectory = [System.IO.Path]::GetFullPath($ReleaseDirectory)
 $resolvedZipPath = [System.IO.Path]::GetFullPath($ZipPath)
 
-if (-not [string]::Equals($resolvedReleaseDirectory.TrimEnd("\"), $expectedReleaseDirectory.TrimEnd("\"), [System.StringComparison]::OrdinalIgnoreCase)) {
-    throw "Refusing to verify an unexpected release directory: '$resolvedReleaseDirectory'."
-}
 if (-not (Test-Path -LiteralPath $resolvedReleaseDirectory -PathType Container)) {
     throw "Release directory does not exist: '$resolvedReleaseDirectory'."
 }
@@ -104,6 +107,7 @@ $requiredFiles = @(
     "SIGNING.md",
     "SECURITY.md",
     "CONTRIBUTING.md",
+    "RELEASE_CHECKLIST.md",
     "SHA256SUMS.txt",
     "Documentation\MCPMender-Handbook.html",
     "Certificates\MCPMender-Community-Build.cer",
@@ -116,6 +120,14 @@ foreach ($relativePath in $requiredFiles) {
     if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
         throw "Required release file is missing: '$relativePath'."
     }
+}
+$releaseChecklistText = Get-Content -LiteralPath (Join-Path $resolvedReleaseDirectory "RELEASE_CHECKLIST.md") -Raw -Encoding utf8
+$releaseDecisions = [regex]::Matches(
+    $releaseChecklistText,
+    "(?im)^\s*-\s*Decision:\s*\*\*(Ship|Hold)\*\*\s*$"
+)
+if ($releaseDecisions.Count -ne 1 -or $releaseDecisions[0].Groups[1].Value -ne "Ship") {
+    throw "The packaged release checklist must contain exactly one explicit 'Decision: **Ship**' record."
 }
 
 $version = (Get-Content -LiteralPath (Join-Path $resolvedReleaseDirectory "VERSION.txt") -Raw).Trim()
@@ -326,6 +338,22 @@ try {
 }
 finally {
     $archive.Dispose()
+}
+
+if ($RequireAdjacentZipChecksum) {
+    $zipChecksumPath = "$resolvedZipPath.sha256"
+    if (-not (Test-Path -LiteralPath $zipChecksumPath -PathType Leaf)) {
+        throw "Adjacent release ZIP checksum is missing: '$zipChecksumPath'."
+    }
+    $zipChecksumLine = (Get-Content -LiteralPath $zipChecksumPath -Raw).Trim()
+    if ($zipChecksumLine -notmatch "^([0-9a-fA-F]{64})  MCPMender\.zip$") {
+        throw "Adjacent release ZIP checksum has an invalid format."
+    }
+    $expectedZipHash = $Matches[1].ToLowerInvariant()
+    $actualZipHash = (Get-FileHash -LiteralPath $resolvedZipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($expectedZipHash -ne $actualZipHash) {
+        throw "Adjacent release ZIP checksum does not match the archive."
+    }
 }
 
 Write-Host "Verified MCPMender $expectedVersion release directory, signatures, SHA-256 manifest, and ZIP structure."

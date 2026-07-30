@@ -8,8 +8,10 @@ import type {
 
 contextBridge.exposeInMainWorld("mcpmender", {
   scan: (): Promise<ScanReport> => ipcRenderer.invoke("mcpmender:scan"),
-  selectProject: (): Promise<{ path?: string; report?: ScanReport }> =>
-    ipcRenderer.invoke("mcpmender:select-project"),
+  selectProject: (
+    locale: string
+  ): Promise<{ path?: string; report?: ScanReport }> =>
+    ipcRenderer.invoke("mcpmender:select-project", locale),
   planProbe: (): Promise<ProbeTarget[]> =>
     ipcRenderer.invoke("mcpmender:probe-plan"),
   runProbe: (): Promise<ProbeReport> =>
@@ -30,11 +32,16 @@ contextBridge.exposeInMainWorld("mcpmender", {
     ipcRenderer.on("mcpmender:probe-progress", listener);
     return () => ipcRenderer.removeListener("mcpmender:probe-progress", listener);
   },
-  repairSafe: (repairIds: string[]): Promise<RepairBatchResult> =>
+  repairSafe: (
+    repairIds: string[]
+  ): Promise<RepairBatchResult & { historyWarning?: string }> =>
     ipcRenderer.invoke("mcpmender:repair-safe", repairIds),
-  exportReport: (): Promise<{ saved: boolean; path?: string }> =>
-    ipcRenderer.invoke("mcpmender:export-report"),
-  openHelp: (): Promise<void> => ipcRenderer.invoke("mcpmender:open-help"),
+  exportReport: (
+    locale: string
+  ): Promise<{ saved: boolean; path?: string }> =>
+    ipcRenderer.invoke("mcpmender:export-report", locale),
+  openHelp: (locale: string): Promise<void> =>
+    ipcRenderer.invoke("mcpmender:open-help", locale),
   storageInfo: (): Promise<{
     dataDir: string;
     portable: boolean;
@@ -52,6 +59,12 @@ contextBridge.exposeInMainWorld("mcpmender", {
       rolledBackAt?: string;
     }>
   > => ipcRenderer.invoke("mcpmender:rollback-list"),
-  rollback: (entryId: string): Promise<ScanReport> =>
+  rollback: (
+    entryId: string
+  ): Promise<{
+    report?: ScanReport;
+    historyWarning?: string;
+    scanWarning?: string;
+  }> =>
     ipcRenderer.invoke("mcpmender:rollback-run", entryId)
 });

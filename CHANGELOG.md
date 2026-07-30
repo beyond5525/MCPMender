@@ -5,6 +5,35 @@ All notable changes to MCPMender（协议修匠）are recorded here.
 The project follows semantic versioning where practical. Versions containing
 `beta` are pre-release builds and may change before v1.0.
 
+## [0.3.0-beta.3] - 2026-07-30
+
+### Fixed
+
+- Prevented raw repair arguments, authorization details, credential URIs, and
+  common token/password key variants from reaching Desktop or CLI output.
+- Added client-specific schema checks and precedence handling so project
+  configurations override shadowed user entries without running stale commands.
+- Accepted VS Code inputs, environment files, workspace variables, socket URLs,
+  numeric environment values, Insiders installations, and named Profiles.
+- Added bounded VS Code Streamable HTTP to SSE fallback without retrying
+  authentication failures, timeouts, or canceled requests.
+- Made probe cancellation close active transports and child processes.
+- Preserved UTF-8 BOM files during repair and isolated failures within a batch.
+- Made Desktop repair and rollback history atomic, separated post-write
+  warnings from mutation failures, and cleared stale scan/probe state.
+
+### Release engineering
+
+- Reworked local packaging around a verified staging directory with rollback,
+  an adjacent ZIP checksum, explicit Ship gating, and a complete Electron SBOM.
+- Stopped tag workflows from automatically publishing unsigned Windows builds;
+  CI artifacts are now labeled clearly and require reviewed manual publication.
+- Strengthened final Linux and macOS artifact smoke checks and help-window
+  coverage.
+- Replaced the unavailable npm-registry quick start with the bundled CLI
+  tarball workflow and expanded the trilingual update, uninstall, data, and
+  backup guidance.
+
 ## [0.3.0-beta.2] - 2026-07-30
 
 ### Fixed

@@ -1,12 +1,21 @@
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  writeFile
+} from "node:fs/promises";
 import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { describe, expect, it } from "vitest";
 import {
   applySafeRepairs,
   normalizeLocale,
   planProbeTargets,
+  probeMcpTargets,
   redactText,
   redactReport,
   probeMcpConfigurations,
@@ -288,7 +297,12 @@ lines.on("line", (line) => {
     process.stdout.write(JSON.stringify({
       jsonrpc: "2.0",
       id: message.id,
-      result: { tools: [] }
+      result: message.params?.cursor
+        ? { tools: [{ name: "second", description: "second", inputSchema: { type: "object" } }] }
+        : {
+            tools: [{ name: "first", description: "first", inputSchema: { type: "object" } }],
+            nextCursor: "page-2"
+          }
     }) + "\\n");
   }
 });
@@ -322,7 +336,7 @@ lines.on("line", (line) => {
     expect(report.results[0]).toMatchObject({
       status: "connected",
       serverNameReported: "mcpmender-test-server",
-      toolCount: 0
+      toolCount: 2
     });
   });
 
@@ -403,5 +417,200 @@ lines.on("line", (line) => {
         server.close((error) => (error ? reject(error) : resolve()))
       );
     }
+  });
+
+  it("falls back from VS Code HTTP to SSE while preserving headers and cleaning up", async () => {
+    const requests: Array<{ method?: string; path?: string; auth?: string }> = [];
+    let sseTransport: SSEServerTransport | undefined;
+    let mcpServer: Server | undefined;
+    let sseResponseClosed = false;
+    const server = createServer(async (request, response) => {
+      const requestUrl = new URL(request.url ?? "/", "http://127.0.0.1");
+      requests.push({
+        method: request.method,
+        path: requestUrl.pathname,
+        auth:
+          typeof request.headers["x-test-auth"] === "string"
+            ? request.headers["x-test-auth"]
+            : undefined
+      });
+      if (requestUrl.pathname === "/mcp" && request.method === "POST") {
+        response.writeHead(405).end("Method Not Allowed");
+        return;
+      }
+      if (requestUrl.pathname === "/mcp" && request.method === "GET") {
+        response.once("close", () => {
+          sseResponseClosed = true;
+        });
+        sseTransport = new SSEServerTransport("/messages", response);
+        mcpServer = new Server(
+          { name: "mcpmender-sse-fallback", version: "1.0.0" },
+          { capabilities: { tools: {} } }
+        );
+        mcpServer.setRequestHandler(ListToolsRequestSchema, async () => ({
+          tools: []
+        }));
+        await mcpServer.connect(sseTransport);
+        return;
+      }
+      if (
+        requestUrl.pathname === "/messages" &&
+        request.method === "POST" &&
+        sseTransport
+      ) {
+        await sseTransport.handlePostMessage(request, response);
+        return;
+      }
+      response.writeHead(404).end();
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve)
+    );
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        throw new Error("SSE fallback test server did not bind");
+      }
+      const report = await probeMcpTargets(
+        [
+          {
+            clientId: "vscode",
+            clientName: "VS Code",
+            configPath: "mcp.json",
+            server: {
+              name: "fallback",
+              args: [],
+              url: `http://127.0.0.1:${address.port}/mcp`,
+              transport: "http",
+              headers: { "X-Test-Auth": "preserved-secret" }
+            }
+          }
+        ],
+        { timeoutMs: 4_000 }
+      );
+      expect(report.results[0]).toMatchObject({
+        status: "connected",
+        serverNameReported: "mcpmender-sse-fallback",
+        toolCount: 0
+      });
+      expect(requests).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ method: "POST", path: "/mcp" }),
+          expect.objectContaining({ method: "GET", path: "/mcp" }),
+          expect.objectContaining({ method: "POST", path: "/messages" })
+        ])
+      );
+      expect(requests.every((request) => request.auth === "preserved-secret"))
+        .toBe(true);
+      for (
+        let attempt = 0;
+        attempt < 20 && !sseResponseClosed;
+        attempt += 1
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      expect(sseResponseClosed).toBe(true);
+    } finally {
+      await mcpServer?.close().catch(() => undefined);
+      await sseTransport?.close().catch(() => undefined);
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve()))
+      );
+    }
+  });
+
+  it("classifies HTTP 403 responses as authentication-required", async () => {
+    let getRequests = 0;
+    const server = createServer((_request, response) => {
+      if (_request.method === "GET") getRequests += 1;
+      response.writeHead(403).end("Forbidden");
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve)
+    );
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        throw new Error("HTTP test server did not bind");
+      }
+      const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-403-"));
+      const configPath = path.join(root, "mcp.json");
+      await writeFile(
+        configPath,
+        JSON.stringify({
+          mcpServers: {
+            protected: { url: `http://127.0.0.1:${address.port}/mcp` }
+          }
+        })
+      );
+      const report = await probeMcpConfigurations({
+        timeoutMs: 2_000,
+        scanOptions: {
+          candidates: [
+            {
+              clientId: "vscode",
+              displayName: "VS Code",
+              path: configPath,
+              format: "jsonc"
+            }
+          ]
+        }
+      });
+      expect(report.results[0].status).toBe("auth-required");
+      expect(getRequests).toBe(0);
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve()))
+      );
+    }
+  });
+
+  it("uses an external AbortSignal and terminates an active stdio process", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-abort-"));
+    const serverPath = path.join(root, "hanging-server.mjs");
+    const pidPath = path.join(root, "server.pid");
+    await writeFile(
+      serverPath,
+      `import { writeFileSync } from "node:fs";
+writeFileSync(${JSON.stringify(pidPath)}, String(process.pid));
+process.stdin.resume();
+`,
+      "utf8"
+    );
+    const controller = new AbortController();
+    const startedAt = Date.now();
+    const probe = probeMcpTargets(
+      [
+        {
+          clientId: "cursor",
+          clientName: "Cursor",
+          configPath: "mcp.json",
+          server: {
+            name: "hanging",
+            command: process.execPath,
+            args: [serverPath],
+            transport: "stdio"
+          }
+        }
+      ],
+      { timeoutMs: 5_000, signal: controller.signal }
+    );
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    controller.abort();
+    const report = await probe;
+    expect(Date.now() - startedAt).toBeLessThan(2_000);
+    expect(report.results[0].status).toBe("timeout");
+
+    const pid = Number(await readFile(pidPath, "utf8"));
+    let alive = true;
+    for (let attempt = 0; attempt < 20 && alive; attempt += 1) {
+      try {
+        process.kill(pid, 0);
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      } catch {
+        alive = false;
+      }
+    }
+    expect(alive).toBe(false);
   });
 });

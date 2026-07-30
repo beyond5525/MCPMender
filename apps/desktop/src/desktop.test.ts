@@ -56,14 +56,15 @@ describe("desktop diagnostics workflow", () => {
       readFile(path.resolve(process.cwd(), "src/renderer.ts"), "utf8")
     ]);
 
-    expect(preload).toContain("repairSafe: (repairIds: string[])");
+    expect(preload).toContain("repairSafe: (");
+    expect(preload).toContain("repairIds: string[]");
     expect(preload).toContain(
       'ipcRenderer.invoke("mcpmender:repair-safe", repairIds)'
     );
     expect(renderer).toContain("report.repairs.map((repair) => repair.id)");
     expect(main).toContain("Array.isArray(repairIds)");
     expect(main).toContain("repairIds.length > 256");
-    expect(main).toContain("lastScanReport?.repairs ?? []");
+    expect(main).toContain("trustedReport.repairs.filter");
     expect(main).toContain("Repair selection is stale or unknown.");
     expect(main).not.toContain("applySafeRepairs(repairIds)");
   });
@@ -75,9 +76,11 @@ describe("desktop diagnostics workflow", () => {
       readFile(path.resolve(process.cwd(), "src/renderer.ts"), "utf8")
     ]);
 
-    expect(preload).toContain("exportReport: ():");
-    expect(preload).toContain('ipcRenderer.invoke("mcpmender:export-report")');
-    expect(renderer).toContain("window.mcpmender.exportReport()");
+    expect(preload).toContain("exportReport: (");
+    expect(preload).toContain(
+      'ipcRenderer.invoke("mcpmender:export-report", locale)'
+    );
+    expect(renderer).toContain("window.mcpmender.exportReport(locale)");
     expect(main).toContain(
       "const report = lastScanReport ?? (await performScan())"
     );
@@ -174,14 +177,83 @@ describe("desktop diagnostics workflow", () => {
       "utf8"
     );
 
-    expect(main).toContain('initialPage === "MCPMender-Handbook.html"');
+    expect(main).toContain("captureTarget === \"help\"");
+    expect(main).toContain(
+      "\"document.querySelector('#help-button')?.click()\""
+    );
+    expect(main).toContain("captureWindow = await waitForHelpWindow()");
     expect(main).toContain('expectedSelector');
     expect(main).toContain('webContents.executeJavaScript(');
     expect(main).toContain("if (!rendererReady)");
     expect(main).toContain("app.exit(70)");
   });
+
+  it("keeps raw repair authority in main while redacting renderer reports", async () => {
+    const main = await readFile(
+      path.resolve(process.cwd(), "src/main.ts"),
+      "utf8"
+    );
+
+    expect(main).toContain("lastScanReport = await scanMcpConfigurations");
+    expect(main).toContain("return rendererReport(lastScanReport)");
+    expect(main).toContain("const safeReport = redactReport(report)");
+    expect(main).toContain("id: opaqueRepairId(report, report.repairs[index])");
+    expect(main).toContain("rendererRepairBatch(result, trustedReport)");
+    expect(main).toContain("trustedReport.repairs.filter");
+  });
+
+  it("writes desktop history atomically and reports post-mutation warnings", async () => {
+    const [main, renderer] = await Promise.all([
+      readFile(path.resolve(process.cwd(), "src/main.ts"), "utf8"),
+      readFile(path.resolve(process.cwd(), "src/renderer.ts"), "utf8")
+    ]);
+
+    expect(main).toContain("async function writeJsonAtomically");
+    expect(main).toContain("await rename(temporaryPath, targetPath)");
+    expect(main).toContain('historyWarning: "REPAIR_HISTORY_SAVE_FAILED"');
+    expect(renderer).toContain("desktop.repairManifestWarning");
+    expect(main).toContain('historyWarning: "ROLLBACK_HISTORY_SAVE_FAILED"');
+    expect(main).toContain('scanWarning: "ROLLBACK_RESCAN_FAILED"');
+    expect(renderer).toContain("desktop.repairHistoryWarning");
+    expect(renderer).toContain("desktop.rollbackHistoryWarning");
+  });
+
+  it("invalidates stale probe results and coordinates conflicting actions", async () => {
+    const renderer = await readFile(
+      path.resolve(process.cwd(), "src/renderer.ts"),
+      "utf8"
+    );
+
+    expect(renderer).toContain("function clearProbeResults()");
+    expect(renderer).toContain("function acceptScanReport");
+    expect(renderer).toContain("clearProbeResults()");
+    expect(renderer).toContain(
+      "const conflictingOperation = isScanning || isProbing || isPlanningProbe"
+    );
+    expect(renderer).toContain("isPlanningProbe");
+    expect(renderer).toContain("await runScan(false)");
+    expect(renderer).toContain("repair.configPath");
+    expect(renderer).toContain("target.configPath");
+  });
+
+  it("uses a single instance and waits for active probe cleanup on quit", async () => {
+    const main = await readFile(
+      path.resolve(process.cwd(), "src/main.ts"),
+      "utf8"
+    );
+
+    expect(main).toContain("app.requestSingleInstanceLock()");
+    expect(main).toContain('app.on("second-instance"');
+    expect(main).toContain('app.on("before-quit"');
+    expect(main).toContain("activeProbe.controller.abort()");
+    expect(main).toContain("signal: controller.signal");
+    expect(main).toContain("if (quitAfterProbe)");
+    expect(main).toContain("{ query: { lang: locale } }");
+  });
 });
 
 function mainWindowUsesLoadFile(main: string): boolean {
-  return main.includes("mainWindow.loadFile(path.join(__dirname, initialPage))");
+  return main.includes(
+    "mainWindow.loadFile(path.join(__dirname, initialPage), initialLoadOptions)"
+  );
 }

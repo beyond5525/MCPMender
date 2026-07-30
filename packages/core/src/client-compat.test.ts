@@ -273,7 +273,7 @@ describe("read isolation and client-specific schemas", () => {
     );
   });
 
-  it("resolves VS Code workspace/env variables and blocks unresolved inputs", async () => {
+  it("accepts VS Code client-managed inputs and env files without reporting a broken config", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-vscode-"));
     const configPath = path.join(root, ".vscode", "mcp.json");
     await mkdir(path.dirname(configPath), { recursive: true });
@@ -304,9 +304,10 @@ describe("read isolation and client-specific schemas", () => {
         variableSyntax: "vscode",
         workspaceDir: root
       });
-      expect(server.unresolvedVariables).toEqual(
+      expect(server.clientManagedVariables).toEqual(
         expect.arrayContaining(["${input:api-key}", "envFile:${workspaceFolder}/.env"])
       );
+      expect(report.summary.errors).toBe(0);
       expect(
         expandServerVariables(
           "${workspaceFolder}/${env:MCPMENDER_VSCODE_ENV}",
@@ -319,7 +320,12 @@ describe("read isolation and client-specific schemas", () => {
       const plan = await planProbeTargets({
         candidates: [candidate(configPath, "vscode")]
       });
-      expect(plan).toHaveLength(0);
+      expect(plan).toHaveLength(1);
+      const probe = await probeMcpTargets(plan);
+      expect(probe.results[0]).toMatchObject({
+        status: "unsupported",
+        messageKey: "probe.unsupported"
+      });
     } finally {
       delete process.env.MCPMENDER_VSCODE_ENV;
     }
@@ -465,6 +471,203 @@ env_http_headers = { X_Dynamic = "MCPMENDER_CODEX_DYNAMIC" }
 });
 
 describe("user and project discovery", () => {
+  it("discovers VS Code stable, Insiders, and profile configs on every platform", async () => {
+    for (const platform of ["win32", "darwin", "linux"] as const) {
+      const root = await mkdtemp(
+        path.join(os.tmpdir(), `mcpmender-vscode-${platform}-`)
+      );
+      const platformPath = platform === "win32" ? path.win32 : path.posix;
+      const normalizedRoot =
+        platform === "win32" ? root : root.replaceAll("\\", "/");
+      const home = platformPath.join(normalizedRoot, "home");
+      const appData = platformPath.join(normalizedRoot, "appdata");
+      const xdg = platformPath.join(home, ".config");
+      process.env.XDG_CONFIG_HOME = xdg;
+      const stableRoot =
+        platform === "darwin"
+          ? platformPath.join(
+              home,
+              "Library",
+              "Application Support",
+              "Code",
+              "User"
+            )
+          : platform === "win32"
+            ? platformPath.join(appData, "Code", "User")
+            : platformPath.join(xdg, "Code", "User");
+      const insidersRoot =
+        platform === "darwin"
+          ? platformPath.join(
+              home,
+              "Library",
+              "Application Support",
+              "Code - Insiders",
+              "User"
+            )
+          : platform === "win32"
+            ? platformPath.join(appData, "Code - Insiders", "User")
+            : platformPath.join(xdg, "Code - Insiders", "User");
+      const expected = [
+        platformPath.join(stableRoot, "mcp.json"),
+        platformPath.join(stableRoot, "profiles", "stable-profile", "mcp.json"),
+        platformPath.join(insidersRoot, "mcp.json"),
+        platformPath.join(
+          insidersRoot,
+          "profiles",
+          "insiders-profile",
+          "mcp.json"
+        )
+      ];
+      for (const configPath of expected) {
+        await mkdir(path.dirname(configPath), { recursive: true });
+        await writeFile(
+          configPath,
+          JSON.stringify({
+            servers: configPath.includes(`${platformPath.sep}profiles${platformPath.sep}`)
+              ? {
+                  profileServer: {
+                    type: "stdio",
+                    command: process.execPath
+                  }
+                }
+              : {}
+          })
+        );
+      }
+
+      const report = await scanMcpConfigurations({
+        platform,
+        homeDir: home,
+        appDataDir: appData,
+        projectDir: platformPath.join(normalizedRoot, "project")
+      });
+      const found = report.clients
+        .filter((client) => client.configFound)
+        .map((client) => client.configPath);
+      for (const configPath of expected) {
+        expect(found.filter((candidatePath) => candidatePath === configPath))
+          .toHaveLength(1);
+      }
+      const profileServers = report.clients
+        .filter((client) => client.displayName.includes("(Profile "))
+        .flatMap((client) => client.servers);
+      expect(profileServers).toHaveLength(2);
+      expect(
+        profileServers.every((server) =>
+          server.probeUnsupportedReason?.includes("active Profile")
+        )
+      ).toBe(true);
+    }
+  });
+
+  it("accepts VS Code socket URLs and numeric environment values", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-vscode-schema-"));
+    const configPath = path.join(root, ".vscode", "mcp.json");
+    await mkdir(path.dirname(configPath), { recursive: true });
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        servers: {
+          socket: { type: "http", url: "unix:///tmp/mcp.sock#/mcp" },
+          pipe: { type: "http", url: "pipe:///pipe/mcpmender" },
+          numeric: {
+            type: "stdio",
+            command: process.execPath,
+            env: { PORT: 3210, REMOVE_ME: null }
+          }
+        }
+      })
+    );
+
+    const report = await scanMcpConfigurations({
+      candidates: [candidate(configPath, "vscode")],
+      includeSensitive: true
+    });
+    expect(report.summary.errors).toBe(0);
+    expect(report.clients[0].servers.find((server) => server.name === "numeric")?.env)
+      .toEqual({ PORT: "3210" });
+    const targets = await loadProbeTargets({
+      candidates: [candidate(configPath, "vscode")]
+    });
+    const socket = targets.find((target) => target.server.name === "socket");
+    expect(socket?.server.probeUnsupportedReason).toContain("unix");
+  });
+
+  it("rejects invalid client containers and incompatible OpenCode V2 transports", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-invalid-schema-"));
+    const invalidContainer = path.join(root, "container.json");
+    const invalidTransport = path.join(root, "transport.json");
+    await writeFile(invalidContainer, JSON.stringify({ mcpServers: [] }));
+    await writeFile(
+      invalidTransport,
+      JSON.stringify({
+        mcp: {
+          servers: {
+            broken: {
+              type: "remote",
+              command: [process.execPath, "server.js"]
+            }
+          }
+        }
+      })
+    );
+
+    for (const configPath of [invalidContainer, invalidTransport]) {
+      const report = await scanMcpConfigurations({
+        candidates: [candidate(configPath, "opencode")]
+      });
+      expect(report.summary.errors).toBeGreaterThan(0);
+      expect(report.findings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ titleKey: "scan.schemaInvalid.title" })
+        ])
+      );
+    }
+  });
+
+  it("keeps only the effective higher-precedence OpenCode server", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-precedence-"));
+    const globalPath = path.join(root, "global.json");
+    const projectPath = path.join(root, "project.json");
+    await writeFile(
+      globalPath,
+      JSON.stringify({
+        mcp: {
+          servers: {
+            same: { type: "local", command: [process.execPath, "global.js"] }
+          }
+        }
+      })
+    );
+    await writeFile(
+      projectPath,
+      JSON.stringify({
+        mcp: {
+          servers: {
+            same: { type: "local", command: [process.execPath, "project.js"] }
+          }
+        }
+      })
+    );
+
+    const targets = await loadProbeTargets({
+      candidates: [
+        {
+          ...candidate(globalPath, "opencode"),
+          scope: "user",
+          precedence: 10
+        },
+        {
+          ...candidate(projectPath, "opencode"),
+          scope: "project",
+          precedence: 20
+        }
+      ]
+    });
+    expect(targets).toHaveLength(1);
+    expect(targets[0].server.args).toEqual(["project.js"]);
+  });
+
   it("discovers supported user and project configuration scopes", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "mcpmender-scopes-"));
     const home = path.join(root, "home");

@@ -4,6 +4,31 @@ Use this checklist for every public MCPMender（协议修匠）release. Record f
 not assumptions. An unchecked item is a known release limitation and must be
 disclosed in the release notes.
 
+## 0.3.0-beta.3 release record
+
+- Decision: **Ship**
+- Release scope: the locally signed Windows x64 portable client, the bundled
+  cross-platform CLI tarball, source, documentation, checksums, notices, and
+  SBOM. Linux and macOS Desktop artifacts may be added only after their native
+  workflow jobs pass; they are not claimed by the local Windows archive.
+- Source identity: `v0.3.0-beta.3`; the packaging script requires the clean
+  tagged commit and rejects a missing or non-Ship decision.
+- Confirmed before packaging on Windows x64: 79 automated tests, all workspace
+  type checks and production builds, production dependency audit, PowerShell
+  parsing, actionlint, main/help real Electron captures in the selected
+  language, and clean process exit.
+- Confirmed by the packaging gate: fresh Desktop and CLI builds, packed CLI
+  installation under Node.js 20.20.2, main/help smoke captures from the final
+  EXE, Authenticode signer/certificate/thumbprint consistency, inner SHA-256
+  manifest, exact ZIP entry hashes, SBOM contents, and adjacent ZIP checksum.
+- Intentionally skipped locally: native Linux and macOS workflow execution,
+  public npm registry publication, uploaded-artifact checksum verification,
+  SmartScreen/Gatekeeper reputation, and clean-machine quick start.
+- Publication policy: GitHub Actions Windows artifacts are intentionally
+  unsigned and labeled as such. The workflow must not automatically create a
+  GitHub Release. A signed community build is uploaded only after separate
+  review of its certificate, thumbprint, checksums, SBOM, and release notes.
+
 ## 1. Scope and version
 
 - [ ] Version is consistent in the workspace, Desktop, CLI, handbook, and
@@ -74,7 +99,7 @@ For each platform, record the operating-system version and artifact name.
 
 ### CLI
 
-- [ ] Packed tarball installs in a clean Node.js 20+ environment.
+- [ ] Packed tarball installs in a clean Node.js 20.3+ environment.
 - [ ] `mcpmender --version` and `mcpmender --help` pass.
 - [ ] `scan`, `scan --json`, `probe`, controlled `probe --run`, `repair`, and
       all three languages pass on Windows, Linux, and macOS.
@@ -133,11 +158,14 @@ For each platform, record the operating-system version and artifact name.
 
 ## Release decision
 
-- Decision: [ ] Ship beta  [ ] Hold
-- Release version:
-- Release commit/tag:
-- Date:
-- Platforms actually validated:
-- Validation intentionally skipped:
-- Known limitations disclosed:
-- Approver:
+- Release version: `0.3.0-beta.3`
+- Release commit/tag: `v0.3.0-beta.3`
+- Date: 2026-07-30
+- Platforms actually validated: Windows x64 Desktop; CLI on Windows x64 with
+  Node.js 20.20.2; cross-platform core behavior in automated tests.
+- Validation intentionally skipped: native Linux/macOS jobs and public
+  post-upload checks, which remain separate publication gates.
+- Known limitations disclosed: self-signed Windows identity, macOS ad-hoc
+  signing, no npm registry package yet, client-managed VS Code inputs/socket
+  transports, and inactive VS Code Profiles are not executed automatically.
+- Approver: Codex automated release audit for the user.

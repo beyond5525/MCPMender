@@ -294,7 +294,7 @@
   <script>
     const handbook = {
       en: {
-        edition: "Offline Handbook · 0.3.0-beta.2",
+        edition: "Offline Handbook · 0.3.0-beta.3",
         printLabel: "Print / Save PDF",
         sideNote: "This handbook is included with MCPMender and works completely offline. Use your browser’s Print command to save the current language as PDF.",
         hero: {
@@ -319,13 +319,13 @@
             html: `<h3>Desktop</h3><ol class="steps">
               <li>Download the package for your operating system and open MCPMender.</li>
               <li>Choose your language in the top-right corner. The choice is remembered.</li>
-              <li>Select a project folder when you want MCPMender to include project-level VS Code configuration.</li>
+              <li>Select a project folder when you want MCPMender to include supported project-level VS Code, Cursor, Codex, Gemini CLI, and OpenCode configuration.</li>
               <li>Select <strong>Scan now</strong>. The default scan is read-only.</li>
               <li>Review each client card and its green, yellow, or red result.</li>
               <li>When you need proof that a server can really start and speak MCP, select <strong>Deep connection check</strong>, review the commands, and confirm.</li>
               <li>If safe repairs are available, open the preview and confirm only after reviewing the before/after command.</li>
             </ol>
-            <h3>CLI</h3><p>Install Node.js 20 or later, then run <code>npm install --global mcpmender@beta</code>.</p><pre>mcpmender scan
+            <h3>CLI</h3><p>Install Node.js 20.3 or later. Download <code>CLI/mcpmender-0.3.0-beta.3.tgz</code> from the release archive, open a terminal in that directory, and run <code>npm install --global ./mcpmender-0.3.0-beta.3.tgz</code>. The <code>mcpmender@beta</code> registry command becomes available only after an npm beta is officially announced.</p><pre>mcpmender scan
 mcpmender scan --lang zh-CN
 mcpmender scan --lang ja
 mcpmender scan --json
@@ -407,7 +407,7 @@ mcpmender repair --apply-safe</pre>
               <tr><td>Linux</td><td>Make the AppImage executable with <code>chmod +x</code> and run it, or extract the tar.gz and run <code>mcpmender</code>. Missing shared libraries vary by distribution.</td></tr>
               <tr><td>WSL</td><td>Do not mix a Windows executable with a Linux path, or a Linux executable with an unconverted Windows path.</td></tr>
             </tbody></table>
-            <div class="callout"><strong>CLI on every platform</strong><p>Install the CLI package with Node.js 20 or later. Desktop and CLI do not need to stay running in the background. Native release builds are smoke-tested on their target operating systems; verify the checksum shown on the release page before opening a downloaded package.</p></div>`
+            <div class="callout"><strong>CLI on every platform</strong><p>Install the CLI package with Node.js 20.3 or later. Desktop and CLI do not need to stay running in the background. Native CI is designed to start the final artifacts on their target operating systems, but the release notes are authoritative about which jobs and manual checks actually passed. Verify the checksum shown on the release page before opening a downloaded package.</p></div>`
           },
           {
             id: "reports", title: "9. Reports and asking for help", lead: "A useful support report describes what was checked, what failed, and what changed—without casually exposing secrets.",
@@ -433,6 +433,8 @@ mcpmender repair --apply-safe</pre>
             <details><summary>Can I use the CLI and Desktop together?</summary><p>Yes. They use the same core scan and repair model. Re-scan after changes made by either interface.</p></details>
             <details><summary>Does MCPMender run in the background?</summary><p>No background service is required for normal use. The program runs when opened or invoked.</p></details>
             <details><summary>Why does the operating system warn about the app signature?</summary><p>Beta Windows builds may be self-signed, and beta macOS builds may use ad-hoc signing. Neither establishes a publisher identity trusted automatically by the operating system. Compare the published SHA-256 checksum and proceed only if you trust the release source.</p></details>
+            <details><summary>How do I upgrade?</summary><p>Close MCPMender, keep a copy of the adjacent <code>data</code> directory, and extract the new release into a new folder. Start the new version and complete a scan before removing the old program folder. Keep repair backups until the repaired servers have worked with the new version.</p></details>
+            <details><summary>How do I uninstall it?</summary><p>Before closing MCPMender, check the exact data path shown in the interface. A writable portable folder uses the adjacent <code>data</code> directory; a read-only folder uses the displayed fallback location. Close MCPMender, delete the program folder, and delete the recorded data path only if you also want to erase language preferences, logs, and rollback backups. If the program was already removed, extract and run the same release once more to display the fallback path. For the CLI, run <code>npm uninstall --global mcpmender</code>. Uninstalling MCPMender does not delete MCP configuration files owned by supported clients.</p></details>
             <details><summary>Can I print this handbook?</summary><p>Yes. Switch to the desired language and use your browser’s Print or Save as PDF command.</p></details>`
           },
           {
@@ -463,7 +465,7 @@ mcpmender repair --apply-safe</pre>
         footer: "MCPMender Offline Handbook · Pre-release documentation. Features may change before v1.0."
       },
       "zh-CN": {
-        edition: "离线使用手册 · 0.3.0-beta.2",
+        edition: "离线使用手册 · 0.3.0-beta.3",
         printLabel: "打印 / 保存为 PDF",
         sideNote: "本手册随 MCPMender 一起提供，可完全离线使用。使用浏览器的“打印”功能，可以把当前语言保存为 PDF。",
         hero: {
@@ -488,13 +490,13 @@ mcpmender repair --apply-safe</pre>
             html: `<h3>Desktop 图形界面</h3><ol class="steps">
               <li>下载适合自己操作系统的安装包或便携版，然后打开 MCPMender。</li>
               <li>在右上角选择语言。软件会记住你的选择。</li>
-              <li>需要检测 VS Code 项目级配置时，先选择项目文件夹。</li>
+              <li>需要检测 VS Code、Cursor、Codex、Gemini CLI 或 OpenCode 的项目级配置时，先选择项目文件夹。</li>
               <li>点击<strong>立即检测</strong>。默认检测只读取，不修改任何配置。</li>
               <li>查看每个客户端卡片上的绿色、黄色或红色结果。</li>
               <li>需要确认服务能否真正启动并使用 MCP 协议时，点击<strong>深度连接检测</strong>，检查命令列表后确认。</li>
               <li>如果存在可安全修复的问题，先查看修改前后内容，确认无误后再执行。</li>
             </ol>
-            <h3>命令行</h3><p>先安装 Node.js 20 或更高版本，然后执行 <code>npm install --global mcpmender@beta</code>。</p><pre>mcpmender scan
+            <h3>命令行</h3><p>先安装 Node.js 20.3 或更高版本。从发布压缩包取得 <code>CLI/mcpmender-0.3.0-beta.3.tgz</code>，在 CLI 目录打开终端并执行 <code>npm install --global ./mcpmender-0.3.0-beta.3.tgz</code>。只有在项目正式公告 npm beta 后，才能改用 <code>mcpmender@beta</code>。</p><pre>mcpmender scan
 mcpmender scan --lang zh-CN
 mcpmender scan --lang ja
 mcpmender scan --json
@@ -576,7 +578,7 @@ mcpmender repair --apply-safe</pre>
               <tr><td>Linux</td><td>对 AppImage 执行 <code>chmod +x</code> 后运行；也可解压 tar.gz 并运行 <code>mcpmender</code>。不同发行版缺失的动态库可能不同。</td></tr>
               <tr><td>WSL</td><td>不要让 Windows 程序直接使用 Linux 路径，也不要让 Linux 程序使用未转换的 Windows 路径。</td></tr>
             </tbody></table>
-            <div class="callout"><strong>所有平台都可使用命令行</strong><p>安装 CLI 包需要 Node.js 20 或更高版本。Desktop 和 CLI 平时都不需要常驻后台。正式发布包会在对应操作系统上执行冒烟验证；打开下载文件前，请核对发布页给出的校验值。</p></div>`
+            <div class="callout"><strong>所有平台都可使用命令行</strong><p>安装 CLI 包需要 Node.js 20.3 或更高版本。Desktop 和 CLI 平时都不需要常驻后台。原生 CI 会尝试在对应系统启动最终产物，但实际通过的平台和人工检查项目以该版本发布说明为准。打开下载文件前，请核对发布页给出的校验值。</p></div>`
           },
           {
             id: "reports", title: "9. 导出报告与寻求帮助", lead: "一份有用的报告应该说明检查内容、失败位置和修改情况，同时避免泄露秘密。",
@@ -602,6 +604,8 @@ mcpmender repair --apply-safe</pre>
             <details><summary>命令行和 Desktop 可以同时使用吗？</summary><p>可以。它们使用同一个核心检测和修复模型。任何一边修改后，都建议重新检测。</p></details>
             <details><summary>MCPMender 会一直在后台运行吗？</summary><p>正常使用不需要后台服务。只有用户打开软件或执行命令时才会运行。</p></details>
             <details><summary>为什么系统提示软件签名不受信任？</summary><p>Beta Windows 包可能使用自签名证书，macOS 包可能使用 ad-hoc（临时）签名；两者都不能建立受操作系统自动信任的发布者身份。请先核对发布页的 SHA-256，并且只在信任发布来源时继续。</p></details>
+            <details><summary>怎么升级 MCPMender？</summary><p>先关闭软件并备份程序旁的 <code>data</code> 目录，把新版本解压到新的文件夹。启动新版本并完成一次检测后，再删除旧程序目录。确认修复后的服务在新版本中正常之前，不要删除修复备份。</p></details>
+            <details><summary>怎么卸载 MCPMender？</summary><p>关闭软件前，先查看并记下界面显示的准确数据路径。便携目录可写时使用旁边的 <code>data</code>；目录只读时使用界面显示的回退位置。关闭 MCPMender 后删除程序文件夹；只有在确定不再需要语言设置、日志和撤销修复备份时，才删除刚才记录的数据目录。如果已经删除程序，可重新解压同一版本并运行一次，让界面再次显示回退路径。CLI 可执行 <code>npm uninstall --global mcpmender</code>。卸载 MCPMender 不会删除各 AI 客户端自己的 MCP 配置。</p></details>
             <details><summary>这份手册可以保存成 PDF 吗？</summary><p>可以。切换到需要的语言后，使用浏览器的“打印”或“另存为 PDF”。</p></details>`
           },
           {
@@ -632,7 +636,7 @@ mcpmender repair --apply-safe</pre>
         footer: "MCPMender 离线使用手册 · 当前为预发布文档，v1.0 前功能可能调整。"
       },
       ja: {
-        edition: "オフラインハンドブック · 0.3.0-beta.2",
+        edition: "オフラインハンドブック · 0.3.0-beta.3",
         printLabel: "印刷 / PDF に保存",
         sideNote: "このハンドブックは MCPMender に同梱され、完全にオフラインで利用できます。ブラウザーの印刷機能で、現在の言語を PDF として保存できます。",
         hero: {
@@ -657,13 +661,13 @@ mcpmender repair --apply-safe</pre>
             html: `<h3>Desktop</h3><ol class="steps">
               <li>OS に合ったパッケージをダウンロードして MCPMender を開きます。</li>
               <li>右上で言語を選びます。選択内容は保存されます。</li>
-              <li>VS Code のプロジェクト設定も診断する場合は、プロジェクトフォルダーを選択します。</li>
+              <li>VS Code、Cursor、Codex、Gemini CLI、OpenCode の対応プロジェクト設定も診断する場合は、プロジェクトフォルダーを選択します。</li>
               <li><strong>今すぐ診断</strong>を選びます。既定の診断は読み取り専用です。</li>
               <li>各クライアントカードの緑・黄・赤の結果を確認します。</li>
               <li>サーバーの起動と MCP 通信を確認する場合は、<strong>詳細接続診断</strong>を選び、コマンド一覧を確認して実行します。</li>
               <li>安全な修復がある場合、変更前後を確認してから実行します。</li>
             </ol>
-            <h3>CLI</h3><p>Node.js 20 以降をインストールし、<code>npm install --global mcpmender@beta</code> を実行します。</p><pre>mcpmender scan
+            <h3>CLI</h3><p>Node.js 20.3 以降をインストールします。リリースアーカイブの <code>CLI/mcpmender-0.3.0-beta.3.tgz</code> を取得し、CLI ディレクトリで <code>npm install --global ./mcpmender-0.3.0-beta.3.tgz</code> を実行します。<code>mcpmender@beta</code> は npm beta の正式発表後にのみ利用できます。</p><pre>mcpmender scan
 mcpmender scan --lang zh-CN
 mcpmender scan --lang ja
 mcpmender scan --json
@@ -745,7 +749,7 @@ mcpmender repair --apply-safe</pre>
               <tr><td>Linux</td><td>AppImage に <code>chmod +x</code> を実行して起動するか、tar.gz を展開して <code>mcpmender</code> を実行します。必要な共有ライブラリはディストリビューションごとに異なります。</td></tr>
               <tr><td>WSL</td><td>Windows 実行ファイルと Linux パス、または Linux 実行ファイルと未変換 Windows パスを混在させないでください。</td></tr>
             </tbody></table>
-            <div class="callout"><strong>CLI は全プラットフォームで利用可能</strong><p>CLI パッケージには Node.js 20 以降が必要です。Desktop と CLI は常駐サービスを必要としません。正式リリースは対象 OS でスモークテストされます。ダウンロードしたパッケージを開く前に、リリースページのチェックサムを確認してください。</p></div>`
+            <div class="callout"><strong>CLI は全プラットフォームで利用可能</strong><p>CLI パッケージには Node.js 20.3 以降が必要です。Desktop と CLI は常駐サービスを必要としません。ネイティブ CI は対象 OS で最終成果物を起動しますが、実際に成功したジョブと手動確認項目は各リリースノートを正とします。ダウンロードしたパッケージを開く前に、リリースページのチェックサムを確認してください。</p></div>`
           },
           {
             id: "reports", title: "9. レポートとサポート依頼", lead: "良いレポートは、何を確認し、どこで失敗し、何が変わったかを秘密を漏らさず伝えます。",
@@ -771,6 +775,8 @@ mcpmender repair --apply-safe</pre>
             <details><summary>CLI と Desktop を一緒に使えますか？</summary><p>はい。同じコアモデルを使います。どちらかで変更した後は再診断してください。</p></details>
             <details><summary>バックグラウンドで動作しますか？</summary><p>通常利用にバックグラウンドサービスは不要です。開くかコマンドを実行したときだけ動作します。</p></details>
             <details><summary>アプリの署名について OS が警告するのはなぜですか？</summary><p>Beta の Windows ビルドは自己署名、macOS ビルドは ad-hoc 署名の場合があります。どちらも OS が自動的に信頼する発行者の身元を確立しません。公開 SHA-256 と一致することを確認し、配布元を信頼できる場合だけ続行してください。</p></details>
+            <details><summary>MCPMender をアップグレードするには？</summary><p>MCPMender を終了し、隣接する <code>data</code> ディレクトリを保存してから、新しいリリースを別のフォルダーへ展開します。新バージョンで診断を完了してから旧プログラムフォルダーを削除し、修復後のサーバー動作を確認するまでバックアップを保持してください。</p></details>
+            <details><summary>MCPMender をアンインストールするには？</summary><p>終了する前に、画面に表示される正確なデータパスを確認して記録します。ポータブルフォルダーが書き込み可能なら隣接する <code>data</code>、読み取り専用なら画面に表示された代替場所が使われます。MCPMender を終了してプログラムフォルダーを削除し、言語設定、ログ、ロールバック用バックアップも消去する場合だけ、記録したデータディレクトリを削除してください。すでにプログラムを削除した場合は、同じリリースをもう一度展開して起動すると代替パスを再確認できます。CLI は <code>npm uninstall --global mcpmender</code> で削除できます。対応クライアント自身の MCP 設定は削除されません。</p></details>
             <details><summary>このハンドブックを PDF にできますか？</summary><p>希望の言語に切り替え、ブラウザーの印刷または PDF 保存を使用してください。</p></details>`
           },
           {
@@ -853,7 +859,11 @@ mcpmender repair --apply-safe</pre>
       document.querySelectorAll("main section").forEach(section => observer.observe(section));
     }
 
-    const initial = normalize(localStorage.getItem("mcpmender.handbook.locale") || navigator.language);
+    const requestedLocale = new URLSearchParams(window.location.search).get("lang");
+    const initial = normalize(requestedLocale || localStorage.getItem("mcpmender.handbook.locale") || navigator.language);
+    if (requestedLocale) {
+      localStorage.setItem("mcpmender.handbook.locale", initial);
+    }
     select.addEventListener("change", () => {
       const locale = normalize(select.value);
       localStorage.setItem("mcpmender.handbook.locale", locale);

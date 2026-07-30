@@ -4,6 +4,8 @@ import {
   mkdir,
   readFile,
   readdir,
+  rename,
+  rm,
   writeFile
 } from "node:fs/promises";
 import {
@@ -34,11 +36,13 @@ import {
   type ProbeReport,
   type ProbeResult,
   type ProbeTarget,
+  type RepairBatchResult,
   type ScanReport
 } from "@mcpmender/core";
 
 let mainWindow: BrowserWindow | undefined;
 let helpWindow: BrowserWindow | undefined;
+let helpWindowLocale: DesktopLocale = "en";
 let selectedProjectDir: string | undefined;
 let lastScanReport: ScanReport | undefined;
 let pendingProbeSnapshot: ProbeTarget[] | undefined;
@@ -48,6 +52,8 @@ let activeProbe:
       senderId: number;
     }
   | undefined;
+let quitAfterProbe = false;
+let forceQuitTimer: NodeJS.Timeout | undefined;
 
 app.setName("MCPMender");
 
@@ -74,6 +80,91 @@ interface RollbackHistoryFile {
   transactionId: string;
   createdAt: string;
   entries: RollbackHistoryEntry[];
+}
+
+type DesktopLocale = "en" | "zh-CN" | "ja";
+
+interface DesktopDialogMessages {
+  projectTitle: string;
+  exportTitle: string;
+  helpTitle: string;
+}
+
+const desktopDialogMessages: Record<DesktopLocale, DesktopDialogMessages> = {
+  en: {
+    projectTitle: "Select a project folder",
+    exportTitle: "Export MCPMender report",
+    helpTitle: "MCPMender Tutorial & Help"
+  },
+  "zh-CN": {
+    projectTitle: "选择项目文件夹",
+    exportTitle: "导出 MCPMender 脱敏报告",
+    helpTitle: "MCPMender 教程与帮助"
+  },
+  ja: {
+    projectTitle: "プロジェクトフォルダーを選択",
+    exportTitle: "MCPMender 匿名化レポートを書き出す",
+    helpTitle: "MCPMender チュートリアルとヘルプ"
+  }
+};
+
+function normalizeDesktopLocale(value: unknown): DesktopLocale {
+  if (value === "zh-CN" || value === "ja") return value;
+  return "en";
+}
+
+function rendererReport(report: ScanReport): ScanReport {
+  // Keep the trusted, unredacted snapshot in the main process for hash-checked
+  // repairs. The renderer only needs a safe presentation copy.
+  const safeReport = redactReport(report);
+  safeReport.repairs = safeReport.repairs.map((repair, index) => ({
+    ...repair,
+    id: opaqueRepairId(report, report.repairs[index])
+  }));
+  return safeReport;
+}
+
+function opaqueRepairId(
+  report: ScanReport,
+  repair: ScanReport["repairs"][number]
+): string {
+  return sha256(
+    `${report.generatedAt}\u0000${repair.id}\u0000${repair.configPath}`
+  );
+}
+
+function rendererRepairBatch(
+  result: RepairBatchResult,
+  report: ScanReport
+): RepairBatchResult {
+  const safeResult = redactReport(result);
+  const opaqueIds = new Map(
+    report.repairs.map((repair) => [
+      repair.id,
+      opaqueRepairId(report, repair)
+    ])
+  );
+  safeResult.results = safeResult.results.map((item) => ({
+    ...item,
+    repairId:
+      opaqueIds.get(item.repairId) ??
+      sha256(`${report.generatedAt}\u0000${item.repairId}`)
+  }));
+  return safeResult;
+}
+
+async function writeJsonAtomically(
+  targetPath: string,
+  value: unknown
+): Promise<void> {
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  const temporaryPath = `${targetPath}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporaryPath, JSON.stringify(value, null, 2), "utf8");
+    await rename(temporaryPath, targetPath);
+  } finally {
+    await rm(temporaryPath, { force: true }).catch(() => undefined);
+  }
 }
 
 function canWriteDirectory(directory: string): boolean {
@@ -130,6 +221,18 @@ function configureStorage(): StorageInfo {
 
 const storageInfo = configureStorage();
 const backupRoot = path.join(storageInfo.dataDir, "backups");
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  });
+}
 
 function desktopScanOptions(): {
   projectDir?: string;
@@ -144,7 +247,7 @@ function desktopScanOptions(): {
 async function performScan(): Promise<ScanReport> {
   pendingProbeSnapshot = undefined;
   lastScanReport = await scanMcpConfigurations(desktopScanOptions());
-  return lastScanReport;
+  return rendererReport(lastScanReport);
 }
 
 function sha256(value: Buffer | string): string {
@@ -207,11 +310,7 @@ async function saveRepairHistory(
     createdAt,
     entries
   };
-  await writeFile(
-    historyFilePath(transactionId),
-    JSON.stringify(history, null, 2),
-    "utf8"
-  );
+  await writeJsonAtomically(historyFilePath(transactionId), history);
 }
 
 async function readRollbackHistory(): Promise<
@@ -251,7 +350,9 @@ async function readRollbackHistory(): Promise<
   return entries.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-async function rollbackHistoryEntry(entryId: string): Promise<void> {
+async function rollbackHistoryEntry(
+  entryId: string
+): Promise<{ historyWarning?: "ROLLBACK_HISTORY_SAVE_FAILED" }> {
   const entries = await readRollbackHistory();
   const entry = entries.find((candidate) => candidate.id === entryId);
   if (!entry || entry.rolledBackAt) throw new Error("ROLLBACK_NOT_AVAILABLE");
@@ -272,14 +373,23 @@ async function rollbackHistoryEntry(entryId: string): Promise<void> {
   await rollbackRepair(entry.backupPath, entry.configPath, {
     expectedCurrentHash: entry.repairedHash
   });
-  const history = JSON.parse(
-    await readFile(entry.historyPath, "utf8")
-  ) as RollbackHistoryFile;
-  const persisted = history.entries.find(
-    (candidate) => candidate.id === entry.id
-  );
-  if (persisted) persisted.rolledBackAt = new Date().toISOString();
-  await writeFile(entry.historyPath, JSON.stringify(history, null, 2), "utf8");
+  try {
+    const history = JSON.parse(
+      await readFile(entry.historyPath, "utf8")
+    ) as RollbackHistoryFile;
+    const persisted = history.entries.find(
+      (candidate) => candidate.id === entry.id
+    );
+    if (persisted) persisted.rolledBackAt = new Date().toISOString();
+    await writeJsonAtomically(entry.historyPath, history);
+    return {};
+  } catch (error) {
+    console.error(
+      "MCPMender restored a configuration but could not update rollback history.",
+      error
+    );
+    return { historyWarning: "ROLLBACK_HISTORY_SAVE_FAILED" };
+  }
 }
 
 function probeSummary(results: ProbeResult[]): ProbeReport {
@@ -345,6 +455,7 @@ async function runProbeWithProgress(
           const report = await probeMcpTargets(targetGroup, {
             timeoutMs: 8_000,
             concurrency: 2,
+            signal: controller.signal,
             platform: process.platform
           });
           results.push(...report.results);
@@ -358,6 +469,12 @@ async function runProbeWithProgress(
   } finally {
     activeProbe = undefined;
     pendingProbeSnapshot = undefined;
+    if (quitAfterProbe) {
+      quitAfterProbe = false;
+      if (forceQuitTimer) clearTimeout(forceQuitTimer);
+      forceQuitTimer = undefined;
+      setImmediate(() => app.quit());
+    }
   }
 }
 
@@ -375,11 +492,19 @@ function hardenWindow(window: BrowserWindow): void {
   });
 }
 
-function openHelpWindow(): void {
+function openHelpWindow(locale: DesktopLocale = "en"): void {
   if (helpWindow && !helpWindow.isDestroyed()) {
+    if (helpWindowLocale !== locale) {
+      helpWindowLocale = locale;
+      void helpWindow.loadFile(
+        path.join(__dirname, "MCPMender-Handbook.html"),
+        { query: { lang: locale } }
+      );
+    }
     helpWindow.focus();
     return;
   }
+  helpWindowLocale = locale;
 
   helpWindow = new BrowserWindow({
     width: 1180,
@@ -388,7 +513,7 @@ function openHelpWindow(): void {
     minHeight: 480,
     show: false,
     backgroundColor: "#08111e",
-    title: "MCPMender Tutorial & Help",
+    title: desktopDialogMessages[locale].helpTitle,
     icon: path.join(__dirname, "icon.png"),
     webPreferences: {
       contextIsolation: true,
@@ -400,11 +525,43 @@ function openHelpWindow(): void {
   });
   hardenWindow(helpWindow);
   helpWindow.setMenuBarVisibility(false);
-  void helpWindow.loadFile(path.join(__dirname, "MCPMender-Handbook.html"));
+  void helpWindow
+    .loadFile(path.join(__dirname, "MCPMender-Handbook.html"), {
+      query: { lang: locale }
+    })
+    .catch(async (error) => {
+      console.error("Unable to load the packaged MCPMender handbook.", error);
+      const failedWindow = helpWindow;
+      helpWindow = undefined;
+      failedWindow?.destroy();
+      if (!process.env.MCPMENDER_CAPTURE_PATH && mainWindow) {
+        await dialog.showMessageBox(mainWindow, {
+          type: "error",
+          title: "MCPMender",
+          message: "MCPMender could not load its local tutorial.",
+          detail: String(error)
+        });
+      }
+    });
   helpWindow.once("ready-to-show", () => helpWindow?.show());
   helpWindow.on("closed", () => {
     helpWindow = undefined;
   });
+}
+
+async function waitForHelpWindow(timeoutMs = 5_000): Promise<BrowserWindow> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (
+      helpWindow &&
+      !helpWindow.isDestroyed() &&
+      !helpWindow.webContents.isLoadingMainFrame()
+    ) {
+      return helpWindow;
+    }
+    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error("The real tutorial window did not finish loading.");
 }
 
 function createWindow(): void {
@@ -433,11 +590,15 @@ function createWindow(): void {
   });
   hardenWindow(mainWindow);
 
-  const initialPage =
-    process.env.MCPMENDER_CAPTURE_TARGET === "help"
-      ? "MCPMender-Handbook.html"
-      : "index.html";
-  void mainWindow.loadFile(path.join(__dirname, initialPage)).catch(async (error) => {
+  const initialPage = "index.html";
+  const captureLocale = process.env.MCPMENDER_CAPTURE_LOCALE;
+  const initialLoadOptions =
+    captureLocale === "en" ||
+    captureLocale === "zh-CN" ||
+    captureLocale === "ja"
+      ? { query: { lang: captureLocale } }
+      : undefined;
+  void mainWindow.loadFile(path.join(__dirname, initialPage), initialLoadOptions).catch(async (error) => {
     console.error(`Unable to load the packaged renderer '${initialPage}'.`, error);
     if (!process.env.MCPMENDER_CAPTURE_PATH) {
       await dialog.showMessageBox(mainWindow!, {
@@ -455,11 +616,19 @@ function createWindow(): void {
     if (capturePath) {
       setTimeout(async () => {
         try {
+          const captureTarget =
+            process.env.MCPMENDER_CAPTURE_TARGET === "help" ? "help" : "main";
+          let captureWindow = mainWindow;
+          if (captureTarget === "help") {
+            await mainWindow?.webContents.executeJavaScript(
+              "document.querySelector('#help-button')?.click()",
+              true
+            );
+            captureWindow = await waitForHelpWindow();
+          }
           const expectedSelector =
-            initialPage === "MCPMender-Handbook.html"
-              ? "#content h1"
-              : "#scan-button";
-          const rendererReady = await mainWindow?.webContents.executeJavaScript(
+            captureTarget === "help" ? "#content h1" : "#scan-button";
+          const rendererReady = await captureWindow?.webContents.executeJavaScript(
             `Boolean(document.querySelector(${JSON.stringify(expectedSelector)}))`,
             true
           );
@@ -468,7 +637,7 @@ function createWindow(): void {
               `Packaged renderer did not expose ${expectedSelector}.`
             );
           }
-          const image = await mainWindow?.webContents.capturePage();
+          const image = await captureWindow?.webContents.capturePage();
           if (!image || image.isEmpty()) {
             throw new Error("Packaged renderer produced an empty capture.");
           }
@@ -484,14 +653,15 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  if (!hasSingleInstanceLock) return;
   ipcMain.handle("mcpmender:scan", (event) => {
     assertTrustedRenderer(event);
     return performScan();
   });
-  ipcMain.handle("mcpmender:select-project", async (event) => {
+  ipcMain.handle("mcpmender:select-project", async (event, locale: unknown) => {
     assertTrustedRenderer(event);
     const result = await dialog.showOpenDialog({
-      title: "Select a project folder",
+      title: desktopDialogMessages[normalizeDesktopLocale(locale)].projectTitle,
       properties: ["openDirectory"]
     });
     if (result.canceled || result.filePaths.length === 0) {
@@ -526,29 +696,44 @@ app.whenReady().then(() => {
       assertTrustedRenderer(event);
       if (
         !Array.isArray(repairIds) ||
+        repairIds.length === 0 ||
         repairIds.length > 256 ||
-        repairIds.some((id) => typeof id !== "string")
+        repairIds.some((id) => typeof id !== "string") ||
+        !lastScanReport
       ) {
         throw new Error("Invalid repair selection.");
       }
       const selected = new Set(repairIds);
-      const repairs = (lastScanReport?.repairs ?? []).filter((repair) =>
-        selected.has(repair.id)
+      const trustedReport = lastScanReport;
+      const repairs = trustedReport.repairs.filter((repair) =>
+        selected.has(opaqueRepairId(trustedReport, repair))
       );
       if (repairs.length !== selected.size) {
         throw new Error("Repair selection is stale or unknown.");
       }
       const createdAt = new Date().toISOString();
       const result = await applySafeRepairs(repairs, { backupRoot });
-      await saveRepairHistory(result.transactionId, createdAt, result.results);
-      return result;
+      const safeResult = rendererRepairBatch(result, trustedReport);
+      try {
+        await saveRepairHistory(result.transactionId, createdAt, result.results);
+        return safeResult;
+      } catch (error) {
+        console.error(
+          "MCPMender applied one or more repairs but could not save desktop rollback history.",
+          error
+        );
+        return {
+          ...safeResult,
+          historyWarning: "REPAIR_HISTORY_SAVE_FAILED" as const
+        };
+      }
     }
   );
-  ipcMain.handle("mcpmender:export-report", async (event) => {
+  ipcMain.handle("mcpmender:export-report", async (event, locale: unknown) => {
     assertTrustedRenderer(event);
     const report = lastScanReport ?? (await performScan());
     const result = await dialog.showSaveDialog({
-      title: "Export MCPMender report",
+      title: desktopDialogMessages[normalizeDesktopLocale(locale)].exportTitle,
       defaultPath: `mcpmender-report-${new Date()
         .toISOString()
         .slice(0, 10)}.json`,
@@ -562,9 +747,9 @@ app.whenReady().then(() => {
     );
     return { saved: true, path: result.filePath };
   });
-  ipcMain.handle("mcpmender:open-help", (event) => {
+  ipcMain.handle("mcpmender:open-help", (event, locale: unknown) => {
     assertTrustedRenderer(event);
-    openHelpWindow();
+    openHelpWindow(normalizeDesktopLocale(locale));
   });
   ipcMain.handle("mcpmender:storage-info", (event) => {
     assertTrustedRenderer(event);
@@ -583,8 +768,22 @@ app.whenReady().then(() => {
       if (typeof entryId !== "string" || entryId.length > 128) {
         throw new Error("ROLLBACK_INVALID_SELECTION");
       }
-      await rollbackHistoryEntry(entryId);
-      return performScan();
+      const outcome = await rollbackHistoryEntry(entryId);
+      try {
+        return {
+          ...outcome,
+          report: await performScan()
+        };
+      } catch (error) {
+        console.error(
+          "MCPMender restored a configuration but could not refresh the scan.",
+          error
+        );
+        return {
+          ...outcome,
+          scanWarning: "ROLLBACK_RESCAN_FAILED" as const
+        };
+      }
     }
   );
   createWindow();
@@ -592,6 +791,19 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
+});
+
+app.on("before-quit", (event) => {
+  if (!activeProbe) return;
+  event.preventDefault();
+  if (quitAfterProbe) return;
+  quitAfterProbe = true;
+  activeProbe.controller.abort();
+  forceQuitTimer = setTimeout(() => {
+    console.error("MCPMender forced shutdown after probe cleanup timed out.");
+    app.exit(0);
+  }, 12_000);
+  forceQuitTimer.unref();
 });
 
 app.on("activate", () => {

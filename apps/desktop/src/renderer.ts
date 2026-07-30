@@ -10,14 +10,20 @@ import type {
   ScanReport
 } from "@mcpmender/core/types";
 
+const startupLocale = new URLSearchParams(window.location.search).get("lang");
 let locale: Locale = normalizeLocale(
-  localStorage.getItem("mcpmender.locale") ?? navigator.language
+  startupLocale ??
+    localStorage.getItem("mcpmender.locale") ??
+    navigator.language
 );
+if (startupLocale) localStorage.setItem("mcpmender.locale", locale);
 let report: ScanReport | undefined;
 let toastTimer: number | undefined;
 let lastScanAt: Date | undefined;
 let isScanning = false;
 let isProbing = false;
+let isPlanningProbe = false;
+let isProbeCanceling = false;
 let lastProbeReport: ProbeReport | undefined;
 let selectedProjectPath: string | undefined;
 let storagePath = "";
@@ -40,6 +46,12 @@ const desktopMessages: Record<Locale, Record<string, string>> = {
     "desktop.repairFailed": "Repair failed: {reason}",
     "desktop.repairPartial":
       "Repair completed for {applied}/{total} item(s). Review skipped or failed items and scan again.",
+    "desktop.repairHistoryWarning":
+      "The repair was applied, but backup history could not be recorded. Keep the original backup files and rescan before making more changes.",
+    "desktop.repairManifestWarning":
+      "The repair was applied, but its transaction manifest could not be saved. Keep the backup files.",
+    "desktop.repairScanWarning":
+      "The repair finished, but verification scan failed. Scan again before another repair.",
     "desktop.rollbackHistory": "Backup history",
     "desktop.rollbackDetail":
       "Restore a configuration only when it has not changed since MCPMender repaired it.",
@@ -54,6 +66,10 @@ const desktopMessages: Record<Locale, Record<string, string>> = {
     "desktop.rollbackBackupChanged":
       "The backup failed its integrity check and was not used.",
     "desktop.rollbackFailed": "Could not restore the backup: {reason}",
+    "desktop.rollbackHistoryWarning":
+      "The configuration was restored, but backup history could not be updated.",
+    "desktop.rollbackScanWarning":
+      "The configuration was restored, but the follow-up scan failed. Scan again before another repair.",
     "desktop.rolledBack": "Already restored",
     "desktop.storagePortable": "Data location: {path}",
     "desktop.storageFallback":
@@ -72,6 +88,12 @@ const desktopMessages: Record<Locale, Record<string, string>> = {
     "desktop.repairFailed": "修复失败：{reason}",
     "desktop.repairPartial":
       "已完成 {applied}/{total} 项修复。请检查被跳过或失败的项目并重新检测。",
+    "desktop.repairHistoryWarning":
+      "修复已生效，但无法记录备份历史。请保留原始备份文件，并在继续修改前重新检测。",
+    "desktop.repairManifestWarning":
+      "修复已生效，但无法保存事务清单。请保留备份文件。",
+    "desktop.repairScanWarning":
+      "修复已完成，但验证检测失败。请在再次修复前重新检测。",
     "desktop.rollbackHistory": "备份与回滚",
     "desktop.rollbackDetail":
       "只有配置在修复后未被再次修改时，才允许恢复备份。",
@@ -85,6 +107,10 @@ const desktopMessages: Record<Locale, Record<string, string>> = {
       "修复后配置又发生了变化。为保护较新的修改，已停止回滚。",
     "desktop.rollbackBackupChanged": "备份完整性校验失败，未执行回滚。",
     "desktop.rollbackFailed": "无法恢复备份：{reason}",
+    "desktop.rollbackHistoryWarning":
+      "配置已恢复，但无法更新备份历史。",
+    "desktop.rollbackScanWarning":
+      "配置已恢复，但后续检测失败。请在再次修复前手动检测。",
     "desktop.rolledBack": "已恢复",
     "desktop.storagePortable": "数据位置：{path}",
     "desktop.storageFallback":
@@ -104,6 +130,12 @@ const desktopMessages: Record<Locale, Record<string, string>> = {
     "desktop.repairFailed": "修復に失敗しました：{reason}",
     "desktop.repairPartial":
       "{applied}/{total} 件を修復しました。スキップまたは失敗した項目を確認して再診断してください。",
+    "desktop.repairHistoryWarning":
+      "修復は適用されましたが、バックアップ履歴を記録できませんでした。元のバックアップを保管し、次の変更前に再診断してください。",
+    "desktop.repairManifestWarning":
+      "修復は適用されましたが、トランザクションマニフェストを保存できませんでした。バックアップを保管してください。",
+    "desktop.repairScanWarning":
+      "修復は完了しましたが、確認診断に失敗しました。次の修復前に再診断してください。",
     "desktop.rollbackHistory": "バックアップ履歴",
     "desktop.rollbackDetail":
       "修復後に変更されていない設定だけをバックアップから復元できます。",
@@ -118,6 +150,10 @@ const desktopMessages: Record<Locale, Record<string, string>> = {
     "desktop.rollbackBackupChanged":
       "バックアップの整合性検証に失敗したため使用しませんでした。",
     "desktop.rollbackFailed": "バックアップを復元できませんでした：{reason}",
+    "desktop.rollbackHistoryWarning":
+      "設定は復元されましたが、バックアップ履歴を更新できませんでした。",
+    "desktop.rollbackScanWarning":
+      "設定は復元されましたが、再診断に失敗しました。次の修復前に診断してください。",
     "desktop.rolledBack": "復元済み",
     "desktop.storagePortable": "データ保存先：{path}",
     "desktop.storageFallback":
@@ -173,6 +209,43 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#039;");
 }
 
+function clearProbeResults(): void {
+  lastProbeReport = undefined;
+  lastProbeProgress = undefined;
+  probeResults.hidden = true;
+  probeResults.replaceChildren();
+}
+
+function invalidateScanReport(): void {
+  report = undefined;
+  lastScanAt = undefined;
+  clearProbeResults();
+  for (const selector of [
+    "#summary-clients",
+    "#summary-servers",
+    "#summary-problems",
+    "#summary-repairs"
+  ]) {
+    document.querySelector(selector)!.textContent = "—";
+  }
+  clientList.replaceChildren();
+  updateActionAvailability();
+  updateScanStatus();
+}
+
+function updateActionAvailability(): void {
+  const conflictingOperation = isScanning || isProbing || isPlanningProbe;
+  scanButton.disabled = conflictingOperation;
+  workspaceButton.disabled = conflictingOperation;
+  repairButton.disabled =
+    conflictingOperation || !report || report.summary.safeRepairs === 0;
+  rollbackButton.disabled = conflictingOperation;
+  exportButton.disabled = !report;
+  probeButton.disabled = isProbing
+    ? isProbeCanceling
+    : isScanning || !report || report.summary.configuredServers === 0;
+}
+
 function applyTranslations(): void {
   document.documentElement.lang = locale;
   languageSelect.value = locale;
@@ -199,10 +272,19 @@ function applyTranslations(): void {
     : "";
   if (report) renderReport(report);
   if (lastProbeReport) renderProbeReport(lastProbeReport);
+  scanButton.textContent = t(isScanning ? "action.scanning" : "action.scan");
   if (isProbing) {
-    probeButton.textContent = t("desktop.probeCancel");
+    probeButton.textContent = t(
+      isProbeCanceling ? "desktop.probeCanceling" : "desktop.probeCancel"
+    );
     if (lastProbeProgress) updateProbeProgress(lastProbeProgress);
+    if (isProbeCanceling) {
+      probeProgressText.textContent = t("desktop.probeCanceling");
+    }
+  } else {
+    probeButton.textContent = t("action.deepCheck");
   }
+  updateActionAvailability();
 }
 
 function updateScanStatus(): void {
@@ -254,10 +336,7 @@ function renderReport(nextReport: ScanReport): void {
     nextReport.summary.safeRepairs
   );
 
-  repairButton.disabled = nextReport.summary.safeRepairs === 0;
-  probeButton.disabled =
-    isProbing || nextReport.summary.configuredServers === 0;
-  exportButton.disabled = false;
+  updateActionAvailability();
 
   clientList.innerHTML = nextReport.clients
     .map((client) => {
@@ -308,6 +387,11 @@ function renderReport(nextReport: ScanReport): void {
         </article>`;
     })
     .join("");
+}
+
+function acceptScanReport(nextReport: ScanReport): void {
+  clearProbeResults();
+  renderReport(nextReport);
 }
 
 function describeProbeTarget(target: ProbeTarget): string {
@@ -409,6 +493,10 @@ function updateProbeProgress(progress: {
   lastProbeProgress = progress;
   probeProgressBar.max = Math.max(1, progress.total);
   probeProgressBar.value = Math.min(progress.completed, probeProgressBar.max);
+  if (isProbeCanceling) {
+    probeProgressText.textContent = t("desktop.probeCanceling");
+    return;
+  }
   const completed = t("desktop.probeProgress", {
     completed: progress.completed,
     total: progress.total
@@ -461,12 +549,26 @@ async function openRollbackHistory(): Promise<void> {
         if (!entryId || !window.confirm(t("desktop.rollbackConfirm"))) return;
         button.disabled = true;
         try {
-          const nextReport = await window.mcpmender.rollback(entryId);
-          renderReport(nextReport);
-          lastScanAt = new Date();
+          const outcome = await window.mcpmender.rollback(entryId);
+          if (outcome.report) {
+            acceptScanReport(outcome.report);
+            lastScanAt = new Date();
+          } else {
+            invalidateScanReport();
+          }
           updateScanStatus();
           rollbackDialog.close();
-          showToast(t("desktop.rollbackComplete"));
+          const warnings = [
+            outcome.historyWarning
+              ? t("desktop.rollbackHistoryWarning")
+              : undefined,
+            outcome.scanWarning ? t("desktop.rollbackScanWarning") : undefined
+          ].filter(Boolean);
+          showToast(
+            warnings.length > 0
+              ? warnings.join(" ")
+              : t("desktop.rollbackComplete")
+          );
         } catch (error) {
           showToast(rollbackErrorMessage(error));
           button.disabled = false;
@@ -477,15 +579,15 @@ async function openRollbackHistory(): Promise<void> {
   } catch (error) {
     showToast(rollbackErrorMessage(error));
   } finally {
-    rollbackButton.disabled = false;
+    updateActionAvailability();
   }
 }
 
-async function runScan(announce = true): Promise<void> {
-  if (isScanning) return;
+async function runScan(announce = true): Promise<boolean> {
+  if (isScanning || isProbing) return false;
   isScanning = true;
-  scanButton.disabled = true;
   scanButton.textContent = t("action.scanning");
+  updateActionAvailability();
   updateScanStatus();
   try {
     const [nextReport] = await Promise.all([
@@ -494,7 +596,7 @@ async function runScan(announce = true): Promise<void> {
         window.setTimeout(resolve, announce ? 650 : 0)
       )
     ]);
-    renderReport(nextReport);
+    acceptScanReport(nextReport);
     lastScanAt = new Date();
     if (announce) {
       showToast(
@@ -505,12 +607,14 @@ async function runScan(announce = true): Promise<void> {
         })
       );
     }
+    return true;
   } catch (error) {
     showToast(t("desktop.scanFailed", { reason: errorMessage(error) }));
+    return false;
   } finally {
     isScanning = false;
-    scanButton.disabled = false;
     scanButton.textContent = t("action.scan");
+    updateActionAvailability();
     updateScanStatus();
   }
 }
@@ -522,6 +626,9 @@ function openRepairPreview(): void {
       (repair) => `
         <article class="repair-item">
           <strong>${escapeHtml(repair.clientName)} / ${escapeHtml(repair.serverName)}</strong>
+          <div class="client-path" title="${escapeHtml(repair.configPath)}">
+            ${escapeHtml(repair.configPath)}
+          </div>
           <div>${escapeHtml(t(repair.titleKey))}</div>
           <div class="command-diff">
             <span>${escapeHtml(t("repair.before"))}</span>
@@ -540,7 +647,9 @@ function openRepairPreview(): void {
 }
 
 async function openProbePreview(): Promise<void> {
-  probeButton.disabled = true;
+  if (isScanning || isProbing || isPlanningProbe) return;
+  isPlanningProbe = true;
+  updateActionAvailability();
   try {
     const targets = await window.mcpmender.planProbe();
     if (targets.length === 0) {
@@ -554,6 +663,9 @@ async function openProbePreview(): Promise<void> {
             <strong>${escapeHtml(
               `${target.clientName} / ${target.server.name}`
             )}</strong>
+            <div class="client-path" title="${escapeHtml(target.configPath)}">
+              ${escapeHtml(target.configPath)}
+            </div>
             <code>${escapeHtml(describeProbeTarget(target))}</code>
           </article>`
       )
@@ -562,17 +674,19 @@ async function openProbePreview(): Promise<void> {
   } catch (error) {
     showToast(t("desktop.scanFailed", { reason: errorMessage(error) }));
   } finally {
-    probeButton.disabled =
-      isProbing || !report || report.summary.configuredServers === 0;
+    isPlanningProbe = false;
+    updateActionAvailability();
   }
 }
 
 async function runDeepProbe(): Promise<void> {
   if (isProbing) return;
   isProbing = true;
+  isProbeCanceling = false;
+  clearProbeResults();
   probeDialog.close();
   probeButton.textContent = t("desktop.probeCancel");
-  probeButton.disabled = false;
+  updateActionAvailability();
   probeProgress.hidden = false;
   probeProgressBar.value = 0;
   probeProgressBar.max = 1;
@@ -597,10 +711,10 @@ async function runDeepProbe(): Promise<void> {
     );
   } finally {
     isProbing = false;
+    isProbeCanceling = false;
     probeProgress.hidden = true;
     probeButton.textContent = t("action.deepCheck");
-    probeButton.disabled =
-      !report || report.summary.configuredServers === 0;
+    updateActionAvailability();
   }
 }
 
@@ -613,9 +727,10 @@ languageSelect.addEventListener("change", () => {
 scanButton.addEventListener("click", () => void runScan(true));
 probeButton.addEventListener("click", () => {
   if (isProbing) {
-    probeButton.disabled = true;
+    isProbeCanceling = true;
     probeButton.textContent = t("desktop.probeCanceling");
     probeProgressText.textContent = t("desktop.probeCanceling");
+    updateActionAvailability();
     void window.mcpmender.cancelProbe();
     return;
   }
@@ -626,7 +741,7 @@ exportButton.addEventListener("click", async () => {
   if (!report) return;
   exportButton.disabled = true;
   try {
-    const result = await window.mcpmender.exportReport();
+    const result = await window.mcpmender.exportReport(locale);
     if (result.saved) showToast(t("report.saved"));
   } catch (error) {
     showToast(t("desktop.exportFailed", { reason: errorMessage(error) }));
@@ -636,7 +751,7 @@ exportButton.addEventListener("click", async () => {
 });
 helpButton.addEventListener("click", async () => {
   try {
-    await window.mcpmender.openHelp();
+    await window.mcpmender.openHelp(locale);
   } catch (error) {
     showToast(t("desktop.scanFailed", { reason: errorMessage(error) }));
   }
@@ -645,20 +760,20 @@ rollbackButton.addEventListener("click", () => void openRollbackHistory());
 workspaceButton.addEventListener("click", async () => {
   workspaceButton.disabled = true;
   try {
-    const result = await window.mcpmender.selectProject();
+    const result = await window.mcpmender.selectProject(locale);
     if (result.path) {
       selectedProjectPath = result.path;
       workspacePath.textContent = result.path;
     }
     if (result.report) {
-      renderReport(result.report);
+      acceptScanReport(result.report);
       lastScanAt = new Date();
       updateScanStatus();
     }
   } catch (error) {
     showToast(t("desktop.projectFailed", { reason: errorMessage(error) }));
   } finally {
-    workspaceButton.disabled = false;
+    updateActionAvailability();
   }
 });
 document
@@ -683,7 +798,7 @@ document.querySelector("#dialog-confirm")!.addEventListener("click", async () =>
     );
     repairDialog.close();
     const applied = result.results.filter((item) => item.applied).length;
-    showToast(
+    const repairMessage =
       applied === result.results.length && applied > 0
         ? t("repair.complete")
         : applied > 0
@@ -691,9 +806,17 @@ document.querySelector("#dialog-confirm")!.addEventListener("click", async () =>
               applied,
               total: result.results.length
             })
-          : t(result.results[0]?.messageKey ?? "repair.failed")
-    );
-    await runScan();
+          : t(result.results[0]?.messageKey ?? "repair.failed");
+    const scanSucceeded = await runScan(false);
+    if (!scanSucceeded) invalidateScanReport();
+    const repairWarnings = [
+      result.manifestWarning
+        ? t("desktop.repairManifestWarning")
+        : undefined,
+      result.historyWarning ? t("desktop.repairHistoryWarning") : undefined,
+      !scanSucceeded ? t("desktop.repairScanWarning") : undefined
+    ].filter(Boolean);
+    showToast([repairMessage, ...repairWarnings].join(" "));
   } catch (error) {
     showToast(t("desktop.repairFailed", { reason: errorMessage(error) }));
   } finally {

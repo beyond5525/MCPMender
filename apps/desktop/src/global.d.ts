@@ -9,7 +9,9 @@ declare global {
   interface Window {
     mcpmender: {
       scan(): Promise<ScanReport>;
-      selectProject(): Promise<{ path?: string; report?: ScanReport }>;
+      selectProject(
+        locale: string
+      ): Promise<{ path?: string; report?: ScanReport }>;
       planProbe(): Promise<ProbeTarget[]>;
       runProbe(): Promise<ProbeReport>;
       cancelProbe(): Promise<{ canceled: boolean }>;
@@ -20,9 +22,13 @@ declare global {
           current?: string;
         }) => void
       ): () => void;
-      repairSafe(repairIds: string[]): Promise<RepairBatchResult>;
-      exportReport(): Promise<{ saved: boolean; path?: string }>;
-      openHelp(): Promise<void>;
+      repairSafe(
+        repairIds: string[]
+      ): Promise<RepairBatchResult & { historyWarning?: string }>;
+      exportReport(
+        locale: string
+      ): Promise<{ saved: boolean; path?: string }>;
+      openHelp(locale: string): Promise<void>;
       storageInfo(): Promise<{
         dataDir: string;
         portable: boolean;
@@ -40,7 +46,11 @@ declare global {
           rolledBackAt?: string;
         }>
       >;
-      rollback(entryId: string): Promise<ScanReport>;
+      rollback(entryId: string): Promise<{
+        report?: ScanReport;
+        historyWarning?: string;
+        scanWarning?: string;
+      }>;
     };
   }
 }

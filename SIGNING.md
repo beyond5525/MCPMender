@@ -33,7 +33,7 @@ certificate dates shown below.
 To inspect the EXE in PowerShell:
 
 ```powershell
-$signature = Get-AuthenticodeSignature .\MCPMender-0.3.0-beta.2-Windows-x64.exe
+$signature = Get-AuthenticodeSignature .\Windows\MCPMender\MCPMender.exe
 $signature | Select-Object Status, StatusMessage
 $signature.SignerCertificate | Select-Object Subject, Thumbprint, NotBefore, NotAfter
 ```
@@ -65,17 +65,28 @@ run the file.
 manifest itself. On Windows, compare one file with:
 
 ```powershell
-Get-FileHash .\MCPMender-0.3.0-beta.2-Windows-x64.exe -Algorithm SHA256
+Get-FileHash .\Windows\MCPMender\MCPMender.exe -Algorithm SHA256
 ```
 
 On macOS or Linux:
 
 ```sh
-shasum -a 256 MCPMender-0.3.0-beta.2-*
+shasum -a 256 MCPMender-0.3.0-beta.3-*
 ```
 
 Compare the complete 64-character hash with `SHA256SUMS.txt`. A mismatch means
 the file is damaged or altered; do not run it.
+
+The upload archive also has an adjacent `MCPMender.zip.sha256` file. Verify that
+file against the downloaded `MCPMender.zip` before extracting the archive.
+
+## GitHub Actions Windows artifacts
+
+The repository does not store a private signing key in GitHub Actions. Windows
+ZIPs retained as workflow artifacts are therefore intentionally unsigned and
+contain `UNSIGNED-WINDOWS-BUILD.txt`. The workflow does not automatically create
+a GitHub Release. A maintainer must review the native artifacts and upload the
+intended signed or accurately declared unsigned files manually.
 
 ## macOS: ad-hoc signing
 
@@ -99,17 +110,18 @@ Also verify the downloaded DMG or ZIP against `SHA256SUMS.txt`.
 Linux AppImage and tar.gz files are not Authenticode- or Apple-signed. Verify
 their SHA-256 values against `SHA256SUMS.txt` before use. Distribution package
 signing may be added after the beta, but it is not claimed for version
-0.3.0-beta.2.
+0.3.0-beta.3.
 
 ## Release maintainer command
 
-From `H:\MCPulse`, the local release script builds, signs, checksums, packages,
-and verifies the release:
+From the repository root, the local release script builds, signs, checksums,
+packages, and verifies the release:
 
 ```powershell
 .\tools\package-release.ps1
 ```
 
-The final folder is `H:\MCPulse\release\MCPMender` and the upload archive is
-`H:\MCPulse\release\MCPMender.zip`. The folder name intentionally has no
-version number.
+The final folder is `release\MCPMender`, the upload archive is
+`release\MCPMender.zip`, and its adjacent checksum is
+`release\MCPMender.zip.sha256`. The folder name intentionally has no version
+number.

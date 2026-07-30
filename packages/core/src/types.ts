@@ -16,6 +16,10 @@ export interface ConfigCandidate {
   displayName: string;
   path: string;
   format: "jsonc" | "toml";
+  scope?: "user" | "project";
+  precedence?: number;
+  workspaceDir?: string;
+  probeUnsupportedReason?: string;
 }
 export interface ServerDefinition {
   name: string;
@@ -35,6 +39,8 @@ export interface ServerDefinition {
   variableSyntax?: "generic" | "gemini" | "opencode" | "vscode";
   workspaceDir?: string;
   unresolvedVariables?: string[];
+  clientManagedVariables?: string[];
+  probeUnsupportedReason?: string;
   repairCompatible?: boolean;
 }
 
@@ -86,6 +92,7 @@ export interface ProbeReport {
 export interface ProbeOptions {
   timeoutMs?: number;
   concurrency?: number;
+  signal?: AbortSignal;
   scanOptions?: Omit<ScanOptions, "includeSensitive">;
   serverNames?: string[];
 }
@@ -93,6 +100,7 @@ export interface ProbeOptions {
 export interface ProbeTargetOptions {
   timeoutMs?: number;
   concurrency?: number;
+  signal?: AbortSignal;
   serverNames?: string[];
   platform?: NodeJS.Platform;
 }
@@ -141,6 +149,8 @@ export interface ClientScanResult {
   serverCount: number;
   servers: ServerDefinition[];
   findings: Finding[];
+  scope?: "user" | "project";
+  precedence?: number;
 }
 
 export interface ScanReport {
@@ -180,4 +190,5 @@ export interface RepairResult {
 export interface RepairBatchResult {
   transactionId: string;
   results: RepairResult[];
+  manifestWarning?: "REPAIR_MANIFEST_SAVE_FAILED";
 }

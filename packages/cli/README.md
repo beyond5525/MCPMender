@@ -8,7 +8,7 @@ Cross-platform MCP diagnostics for Windows, macOS, and Linux.
 npm install --global mcpmender@beta
 ```
 
-Node.js 20 or newer is required. The published CLI bundle includes MCPMender's
+Node.js 20.3 or newer is required. The published CLI bundle includes MCPMender's
 runtime code; it does not install a background service.
 
 ## Commands

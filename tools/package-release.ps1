@@ -7,22 +7,20 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$expectedProjectRoot = [System.IO.Path]::GetFullPath("H:\MCPulse")
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $workspaceManifest = Get-Content -LiteralPath (Join-Path $projectRoot "package.json") -Raw | ConvertFrom-Json
 $version = [string]$workspaceManifest.version
 $releaseRoot = [System.IO.Path]::GetFullPath((Join-Path $projectRoot "release"))
-$releaseDirectory = [System.IO.Path]::GetFullPath((Join-Path $releaseRoot "MCPMender"))
-$expectedReleaseDirectory = [System.IO.Path]::GetFullPath("H:\MCPulse\release\MCPMender")
-$zipPath = [System.IO.Path]::GetFullPath((Join-Path $releaseRoot "MCPMender.zip"))
+$finalReleaseDirectory = [System.IO.Path]::GetFullPath((Join-Path $releaseRoot "MCPMender"))
+$finalZipPath = [System.IO.Path]::GetFullPath((Join-Path $releaseRoot "MCPMender.zip"))
+$finalZipChecksumPath = "$finalZipPath.sha256"
 $packWorkDirectory = [System.IO.Path]::GetFullPath((Join-Path $projectRoot "work\release-pack"))
-
-if (-not [string]::Equals($projectRoot.TrimEnd("\"), $expectedProjectRoot.TrimEnd("\"), [System.StringComparison]::OrdinalIgnoreCase)) {
-    throw "This release script is pinned to '$expectedProjectRoot'; actual project root is '$projectRoot'."
-}
-if (-not [string]::Equals($releaseDirectory.TrimEnd("\"), $expectedReleaseDirectory.TrimEnd("\"), [System.StringComparison]::OrdinalIgnoreCase)) {
-    throw "Refusing to rebuild an unexpected release directory: '$releaseDirectory'."
-}
+$stageId = [Guid]::NewGuid().ToString("N")
+$releaseDirectory = [System.IO.Path]::GetFullPath((Join-Path $releaseRoot "MCPMender.staging.$stageId"))
+$zipPath = [System.IO.Path]::GetFullPath((Join-Path $releaseRoot "MCPMender.staging.$stageId.zip"))
+$previousReleaseDirectory = [System.IO.Path]::GetFullPath((Join-Path $releaseRoot "MCPMender.previous.$stageId"))
+$previousZipPath = [System.IO.Path]::GetFullPath((Join-Path $releaseRoot "MCPMender.previous.$stageId.zip"))
+$previousZipChecksumPath = [System.IO.Path]::GetFullPath((Join-Path $releaseRoot "MCPMender.previous.$stageId.zip.sha256"))
 if ($version -notmatch "^\d+\.\d+\.\d+-beta\.\d+$") {
     throw "Release version '$version' is not a supported beta version."
 }
@@ -129,6 +127,15 @@ function Assert-ReleaseGitState {
 }
 
 $headSha = Assert-ReleaseGitState
+$releaseChecklistSource = Join-Path $projectRoot "RELEASE_CHECKLIST.md"
+$releaseChecklistText = Get-Content -LiteralPath $releaseChecklistSource -Raw -Encoding utf8
+$releaseDecisions = [regex]::Matches(
+    $releaseChecklistText,
+    "(?im)^\s*-\s*Decision:\s*\*\*(Ship|Hold)\*\*\s*$"
+)
+if ($releaseDecisions.Count -ne 1 -or $releaseDecisions[0].Groups[1].Value -ne "Ship") {
+    throw "RELEASE_CHECKLIST.md must contain exactly one explicit 'Decision: **Ship**' record before packaging."
+}
 
 if (Test-Path -LiteralPath $packWorkDirectory) {
     $expectedWorkRoot = [System.IO.Path]::GetFullPath((Join-Path $projectRoot "work"))
@@ -195,9 +202,7 @@ if (-not (Test-Path -LiteralPath $windowsUnpackedExecutable -PathType Leaf)) {
 # the release version from its exact tag.
 $null = Assert-ReleaseGitState -ExpectedHead $headSha
 
-if (Test-Path -LiteralPath $releaseDirectory) {
-    Remove-Item -LiteralPath $releaseDirectory -Recurse -Force
-}
+New-Item -ItemType Directory -Force -Path $releaseRoot | Out-Null
 New-Item -ItemType Directory -Path $releaseDirectory | Out-Null
 
 $windowsReleaseDirectory = Join-Path $releaseDirectory "Windows\MCPMender"
@@ -217,8 +222,9 @@ Copy-Item -LiteralPath $generatedSbomPath -Destination (Join-Path $releaseDirect
 Copy-Item -LiteralPath (Join-Path $projectRoot "SIGNING.md") -Destination $releaseDirectory
 Copy-Item -LiteralPath (Join-Path $projectRoot "SECURITY.md") -Destination $releaseDirectory
 Copy-Item -LiteralPath (Join-Path $projectRoot "CONTRIBUTING.md") -Destination $releaseDirectory
+Copy-Item -LiteralPath $releaseChecklistSource -Destination $releaseDirectory
 $releaseReadmePath = Join-Path $releaseDirectory "README.md"
-$releaseReadme = Get-Content -LiteralPath $releaseReadmePath -Raw
+$releaseReadme = Get-Content -LiteralPath $releaseReadmePath -Raw -Encoding utf8
 $releaseReadme = $releaseReadme.Replace(
     "(docs/MCPMender-Handbook.html)",
     "(Documentation/MCPMender-Handbook.html)"
@@ -286,11 +292,12 @@ Set-Content `
 
 & (Join-Path $projectRoot "tools\smoke-windows-release.ps1") `
     -ExecutablePath $windowsCopies[0].FullName `
-    -CaptureTarget main
+    -CaptureTarget main `
+    -CapturePath (Join-Path $packWorkDirectory "mcpmender-release-main-smoke.png")
 & (Join-Path $projectRoot "tools\smoke-windows-release.ps1") `
     -ExecutablePath $windowsCopies[0].FullName `
     -CaptureTarget help `
-    -CapturePath "F:\GemeHuanJing\MCPMenderTools\temp\mcpmender-release-help-smoke.png"
+    -CapturePath (Join-Path $packWorkDirectory "mcpmender-release-help-smoke.png")
 
 $checksumPath = Join-Path $releaseDirectory "SHA256SUMS.txt"
 $checksumLines = Get-ChildItem -LiteralPath $releaseDirectory -File -Recurse |
@@ -326,5 +333,81 @@ for ($attempt = 1; $attempt -le 5 -and -not $archiveCreated; $attempt++) {
 
 & (Join-Path $projectRoot "tools\verify-release.ps1") -ReleaseDirectory $releaseDirectory -ZipPath $zipPath
 
-Write-Host "Release folder: $releaseDirectory"
-Write-Host "Release archive: $zipPath"
+# The complete release is built and verified in a sibling staging directory.
+# Rename the prior release out of the way only after every build/sign/smoke gate
+# has passed, then promote the staged folder and ZIP on the same volume.
+$releaseDirectoryPromoted = $false
+$releaseZipPromoted = $false
+try {
+    if (Test-Path -LiteralPath $finalReleaseDirectory) {
+        Move-Item -LiteralPath $finalReleaseDirectory -Destination $previousReleaseDirectory
+    }
+    if (Test-Path -LiteralPath $finalZipPath) {
+        Move-Item -LiteralPath $finalZipPath -Destination $previousZipPath
+    }
+    if (Test-Path -LiteralPath $finalZipChecksumPath) {
+        Move-Item -LiteralPath $finalZipChecksumPath -Destination $previousZipChecksumPath
+    }
+    Move-Item -LiteralPath $releaseDirectory -Destination $finalReleaseDirectory
+    $releaseDirectoryPromoted = $true
+    Move-Item -LiteralPath $zipPath -Destination $finalZipPath
+    $releaseZipPromoted = $true
+
+    $zipHash = (Get-FileHash -LiteralPath $finalZipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    "$zipHash  MCPMender.zip" |
+        Set-Content -LiteralPath $finalZipChecksumPath -Encoding ascii
+
+    & (Join-Path $projectRoot "tools\verify-release.ps1") `
+        -ReleaseDirectory $finalReleaseDirectory `
+        -ZipPath $finalZipPath `
+        -RequireAdjacentZipChecksum
+
+}
+catch {
+    if (Test-Path -LiteralPath $finalZipChecksumPath) {
+        Remove-Item -LiteralPath $finalZipChecksumPath -Force
+    }
+    if ($releaseZipPromoted -and (Test-Path -LiteralPath $finalZipPath)) {
+        Move-Item -LiteralPath $finalZipPath -Destination $zipPath
+    }
+    if ($releaseDirectoryPromoted -and (Test-Path -LiteralPath $finalReleaseDirectory)) {
+        Move-Item -LiteralPath $finalReleaseDirectory -Destination $releaseDirectory
+    }
+    if (Test-Path -LiteralPath $previousReleaseDirectory) {
+        Move-Item -LiteralPath $previousReleaseDirectory -Destination $finalReleaseDirectory
+    }
+    if (Test-Path -LiteralPath $previousZipPath) {
+        Move-Item -LiteralPath $previousZipPath -Destination $finalZipPath
+    }
+    if (Test-Path -LiteralPath $previousZipChecksumPath) {
+        Move-Item -LiteralPath $previousZipChecksumPath -Destination $finalZipChecksumPath
+    }
+    throw
+}
+
+# Promotion and final verification have committed successfully. Old backups are
+# now best-effort cleanup only: a cleanup failure must never roll back a valid
+# new release or attempt to restore a partially removed old one.
+foreach ($oldArtifact in @(
+    @{ Path = $previousReleaseDirectory; Recurse = $true },
+    @{ Path = $previousZipPath; Recurse = $false },
+    @{ Path = $previousZipChecksumPath; Recurse = $false }
+)) {
+    if (-not (Test-Path -LiteralPath $oldArtifact.Path)) {
+        continue
+    }
+    try {
+        if ($oldArtifact.Recurse) {
+            Remove-Item -LiteralPath $oldArtifact.Path -Recurse -Force
+        } else {
+            Remove-Item -LiteralPath $oldArtifact.Path -Force
+        }
+    }
+    catch {
+        Write-Warning "The new release is valid, but an old backup could not be removed: '$($oldArtifact.Path)'. Remove it manually after confirming the new release."
+    }
+}
+
+Write-Host "Release folder: $finalReleaseDirectory"
+Write-Host "Release archive: $finalZipPath"
+Write-Host "Release archive checksum: $finalZipChecksumPath"
