@@ -15,6 +15,16 @@ describe("offline handbook", () => {
     expect(html).toContain('<option value="zh-CN">简体中文</option>');
     expect(html).toContain('<option value="ja">日本語</option>');
     expect(html.match(/mcpmender probe --run/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(
+      html.match(
+        /APPIMAGE_EXTRACT_AND_RUN=1 \.\/MCPMender\*\.AppImage/g
+      )
+    ).toHaveLength(3);
+    expect(html).toContain(
+      "It does not repair MCP configuration, and it does not require"
+    );
+    expect(html).toContain("不会修复 MCP 配置，也不需要使用");
+    expect(html).toContain("MCP 設定を修復する機能ではなく");
     expect(html).toContain("深度连接检测");
     expect(html).toContain("詳細接続診断");
 

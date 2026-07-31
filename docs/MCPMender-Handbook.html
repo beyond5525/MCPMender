@@ -410,6 +410,7 @@ mcpmender repair --apply-safe</pre>
               <tr><td>Linux</td><td>Make the AppImage executable with <code>chmod +x</code> and run it, or extract the tar.gz and run <code>mcpmender</code>. Missing shared libraries vary by distribution.</td></tr>
               <tr><td>WSL</td><td>Do not mix a Windows executable with a Linux path, or a Linux executable with an unconverted Windows path.</td></tr>
             </tbody></table>
+            <div class="callout warning"><strong>AppImage cannot start without FUSE?</strong><p>Use the AppImage's built-in extract-and-run fallback:</p><pre>APPIMAGE_EXTRACT_AND_RUN=1 ./MCPMender*.AppImage</pre><p>This only changes how the AppImage is launched. It does not repair MCP configuration, and it does not require <code>sudo</code> or root access.</p></div>
             <div class="callout"><strong>CLI on every platform</strong><p>Install the CLI package with Node.js 20.3 or later. Desktop and CLI do not need to stay running in the background. Native CI is designed to start the final artifacts on their target operating systems, but the release notes are authoritative about which jobs and manual checks actually passed. Verify the checksum shown on the release page before opening a downloaded package.</p></div>`
           },
           {
@@ -581,6 +582,7 @@ mcpmender repair --apply-safe</pre>
               <tr><td>Linux</td><td>对 AppImage 执行 <code>chmod +x</code> 后运行；也可解压 tar.gz 并运行 <code>mcpmender</code>。不同发行版缺失的动态库可能不同。</td></tr>
               <tr><td>WSL</td><td>不要让 Windows 程序直接使用 Linux 路径，也不要让 Linux 程序使用未转换的 Windows 路径。</td></tr>
             </tbody></table>
+            <div class="callout warning"><strong>系统缺少 FUSE，AppImage 无法启动？</strong><p>可以使用 AppImage 内置的“解压后运行”回退方式：</p><pre>APPIMAGE_EXTRACT_AND_RUN=1 ./MCPMender*.AppImage</pre><p>它只改变 AppImage 的启动方式，不会修复 MCP 配置，也不需要使用 <code>sudo</code> 或 root 权限。</p></div>
             <div class="callout"><strong>所有平台都可使用命令行</strong><p>安装 CLI 包需要 Node.js 20.3 或更高版本。Desktop 和 CLI 平时都不需要常驻后台。原生 CI 会尝试在对应系统启动最终产物，但实际通过的平台和人工检查项目以该版本发布说明为准。打开下载文件前，请核对发布页给出的校验值。</p></div>`
           },
           {
@@ -752,6 +754,7 @@ mcpmender repair --apply-safe</pre>
               <tr><td>Linux</td><td>AppImage に <code>chmod +x</code> を実行して起動するか、tar.gz を展開して <code>mcpmender</code> を実行します。必要な共有ライブラリはディストリビューションごとに異なります。</td></tr>
               <tr><td>WSL</td><td>Windows 実行ファイルと Linux パス、または Linux 実行ファイルと未変換 Windows パスを混在させないでください。</td></tr>
             </tbody></table>
+            <div class="callout warning"><strong>FUSE がないため AppImage を起動できない場合</strong><p>AppImage の組み込み展開実行フォールバックを使用できます：</p><pre>APPIMAGE_EXTRACT_AND_RUN=1 ./MCPMender*.AppImage</pre><p>これは AppImage の起動方法だけを変更します。MCP 設定を修復する機能ではなく、<code>sudo</code> や root 権限も不要です。</p></div>
             <div class="callout"><strong>CLI は全プラットフォームで利用可能</strong><p>CLI パッケージには Node.js 20.3 以降が必要です。Desktop と CLI は常駐サービスを必要としません。ネイティブ CI は対象 OS で最終成果物を起動しますが、実際に成功したジョブと手動確認項目は各リリースノートを正とします。ダウンロードしたパッケージを開く前に、リリースページのチェックサムを確認してください。</p></div>`
           },
           {

@@ -151,6 +151,16 @@ chmod +x MCPMender*.AppImage
 ./MCPMender*.AppImage
 ```
 
+If the AppImage cannot start because FUSE is unavailable, use its built-in
+extract-and-run fallback:
+
+```sh
+APPIMAGE_EXTRACT_AND_RUN=1 ./MCPMender*.AppImage
+```
+
+This only changes how the AppImage is launched. It does not repair MCP
+configuration, and it does not require `sudo` or root access.
+
 For a tar.gz package:
 
 ```sh
