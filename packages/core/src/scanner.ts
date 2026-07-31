@@ -61,6 +61,18 @@ async function defaultCandidates(
       : platform === "win32"
         ? platformPath.join(appData, "Code - Insiders", "User")
         : platformPath.join(xdgConfig, "Code - Insiders", "User");
+  const vscodiumUserRoot =
+    platform === "darwin"
+      ? platformPath.join(
+          home,
+          "Library",
+          "Application Support",
+          "VSCodium",
+          "User"
+        )
+      : platform === "win32"
+        ? platformPath.join(appData, "VSCodium", "User")
+        : platformPath.join(xdgConfig, "VSCodium", "User");
   const claudePath =
     platform === "win32"
       ? platformPath.join(
@@ -149,6 +161,15 @@ async function defaultCandidates(
       clientId: "vscode",
       displayName: "VS Code Insiders (User)",
       path: platformPath.join(vscodeInsidersUserRoot, "mcp.json"),
+      format: "jsonc",
+      scope: "user",
+      precedence: 10,
+      workspaceDir: project
+    },
+    {
+      clientId: "vscode",
+      displayName: "VSCodium (User)",
+      path: platformPath.join(vscodiumUserRoot, "mcp.json"),
       format: "jsonc",
       scope: "user",
       precedence: 10,

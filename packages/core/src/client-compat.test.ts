@@ -471,7 +471,7 @@ env_http_headers = { X_Dynamic = "MCPMENDER_CODEX_DYNAMIC" }
 });
 
 describe("user and project discovery", () => {
-  it("discovers VS Code stable, Insiders, and profile configs on every platform", async () => {
+  it("discovers VS Code, VSCodium, and profile configs on every platform", async () => {
     // Profile discovery reads real directories. Windows separators cannot be
     // represented as directory boundaries on a POSIX filesystem, so each
     // native CI runner validates its own path rules and the release matrix
@@ -515,6 +515,18 @@ describe("user and project discovery", () => {
           : platform === "win32"
             ? platformPath.join(appData, "Code - Insiders", "User")
             : platformPath.join(xdg, "Code - Insiders", "User");
+      const vscodiumRoot =
+        platform === "darwin"
+          ? platformPath.join(
+              home,
+              "Library",
+              "Application Support",
+              "VSCodium",
+              "User"
+            )
+          : platform === "win32"
+            ? platformPath.join(appData, "VSCodium", "User")
+            : platformPath.join(xdg, "VSCodium", "User");
       const expected = [
         platformPath.join(stableRoot, "mcp.json"),
         platformPath.join(stableRoot, "profiles", "stable-profile", "mcp.json"),
@@ -524,7 +536,8 @@ describe("user and project discovery", () => {
           "profiles",
           "insiders-profile",
           "mcp.json"
-        )
+        ),
+        platformPath.join(vscodiumRoot, "mcp.json")
       ];
       for (const configPath of expected) {
         await mkdir(path.dirname(configPath), { recursive: true });
