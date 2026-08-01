@@ -6,15 +6,15 @@ remove the public-beta or platform-signing disclosures.
 
 Repository: https://github.com/beyond5525/MCPMender
 
-Downloads: https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.4
+Downloads: https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.5
 
 ## Short post
 
 **MCP server not showing up? MCPMender helps find out why.**
 
 MCPMender is an open-source, local-first diagnostic and safe-repair tool for
-MCP configurations used by Codex, Claude Desktop, Cursor, VS Code, Gemini CLI,
-and OpenCode.
+MCP configurations used by Codex, Claude Desktop, Cursor, VS Code, VSCodium,
+Gemini CLI, and OpenCode.
 
 Start with a read-only scan, opt in to a real MCP handshake only when needed,
 and preview eligible low-risk repairs before anything changes. Repairs create a
@@ -44,8 +44,8 @@ terminal.
 The public beta includes:
 
 - A Desktop application and a `mcpmender` command-line interface.
-- Configuration discovery for Codex, Claude Desktop, Cursor, VS Code, Gemini
-  CLI, and OpenCode.
+- Configuration discovery for Codex, Claude Desktop, Cursor, VS Code,
+  VSCodium, Gemini CLI, and OpenCode.
 - A read-only static scan that does not start configured commands or contact
   remote MCP endpoints.
 - An explicitly confirmed live probe that can perform a real MCP initialize
@@ -62,7 +62,7 @@ third-party command is trustworthy. A live probe can execute configured code or
 contact a remote endpoint, so MCPMender shows that boundary and asks for
 confirmation first.
 
-This is version 0.3.0-beta.4, not a stable 1.0 release. Windows builds may use a
+This is version 0.3.0-beta.5, not a stable 1.0 release. Windows builds may use a
 self-signed certificate, while macOS builds may be ad-hoc signed and not
 notarized. Users should inspect the release notes and verify the published
 SHA-256 checksum before running a download.
@@ -71,7 +71,7 @@ Repository and screenshots:
 https://github.com/beyond5525/MCPMender
 
 Downloads:
-https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.4
+https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.5
 
 Feedback is especially useful for reproducible, redacted MCP configuration
 failures and platform-specific behavior. Please do not post raw configuration

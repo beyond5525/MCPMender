@@ -5,14 +5,14 @@
 
 项目主页：https://github.com/beyond5525/MCPMender
 
-下载页面：https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.4
+下载页面：https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.5
 
 ## 短帖
 
 **MCP Server 不显示、启动失败，却不知道问题在哪里？可以试试协议修匠。**
 
 MCPMender（协议修匠）是一款开源、本地运行的 MCP 配置诊断与安全修复工具，
-支持 Codex、Claude Desktop、Cursor、VS Code、Gemini CLI 和 OpenCode。
+支持 Codex、Claude Desktop、Cursor、VS Code、VSCodium、Gemini CLI 和 OpenCode。
 
 它会先进行不启动 MCP 命令、不连接远程端点的只读检测；确有需要时，用户再主动
 执行真实 MCP 握手测试。符合条件的低风险问题可以先预览、再修复，并自动生成
@@ -38,8 +38,8 @@ JSON 或 TOML 格式错误、启动命令不存在、环境变量没有设置、
 当前公开测试版包括：
 
 - Desktop 图形界面和 `mcpmender` 命令行。
-- 自动发现 Codex、Claude Desktop、Cursor、VS Code、Gemini CLI 和 OpenCode
-  的 MCP 配置。
+- 自动发现 Codex、Claude Desktop、Cursor、VS Code、VSCodium、Gemini CLI 和
+  OpenCode 的 MCP 配置。
 - 默认进行只读静态检测，不启动配置中的命令，也不连接远程 MCP 端点。
 - 经过明确确认后，可通过 stdio 或 Streamable HTTP 执行真实 MCP initialize
   握手。
@@ -53,7 +53,7 @@ JSON 或 TOML 格式错误、启动命令不存在、环境变量没有设置、
 任意 MCP Server，也不会声称第三方命令一定可信。真实连接检测可能执行配置中的
 程序或访问远程地址，因此软件会先说明风险并要求用户确认。
 
-目前版本是 0.3.0-beta.4，并非稳定版 1.0。Windows 版本可能使用自签名证书；
+目前版本是 0.3.0-beta.5，并非稳定版 1.0。Windows 版本可能使用自签名证书；
 macOS 版本可能采用临时签名且未经过 Apple 公证。下载安装后，请先阅读发布说明
 并核对 SHA-256 校验值。
 
@@ -61,7 +61,7 @@ macOS 版本可能采用临时签名且未经过 Apple 公证。下载安装后�
 https://github.com/beyond5525/MCPMender
 
 下载页面：
-https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.4
+https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.5
 
 欢迎反馈能够稳定复现、并且已经脱敏的 MCP 配置问题和不同系统上的使用表现。
 请不要在 Issue 中粘贴包含密钥、Token 或私人路径的原始配置文件。

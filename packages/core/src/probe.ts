@@ -256,7 +256,7 @@ async function inspectConnectedTransport(
   externalSignal?: AbortSignal
 ): Promise<ProbeResult> {
   const client = new Client(
-    { name: "mcpmender-diagnostics", version: "0.3.0-beta.4" },
+    { name: "mcpmender-diagnostics", version: "0.3.0-beta.5" },
     { capabilities: {} }
   );
   const connect = combinedProbeSignal(timeoutMs, startedAt, externalSignal);

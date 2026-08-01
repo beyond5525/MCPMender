@@ -13,18 +13,14 @@ cannot complete an MCP handshake in Codex, Claude Desktop, Cursor, VS Code,
 VSCodium, Gemini CLI, and OpenCode.
 
 <p align="center">
-  <a href="https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.4"><strong>Download MCPMender 0.3.0-beta.4 · 下载公开测试版 · パブリックベータをダウンロード →</strong></a>
+  <a href="https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.5"><strong>Download MCPMender 0.3.0-beta.5 · 下载公开测试版 · パブリックベータをダウンロード →</strong></a>
   <br>
   Windows x64 · macOS Apple Silicon / Intel · Linux x64 · Command line
 </p>
 
-> **Release status:** `0.3.0-beta.4`. This is a public beta, not a stable v1.0
+> **Release status:** `0.3.0-beta.5`. This is a public beta, not a stable v1.0
 > release. Keep a copy of important configuration and review every repair
 > preview before applying it.
->
-> **Development note:** VSCodium user-level discovery is available on `main`
-> and is planned for the next beta. The `0.3.0-beta.4` downloads do not include
-> it yet.
 
 ## MCPMender in 30 seconds
 
@@ -37,7 +33,7 @@ VSCodium, Gemini CLI, and OpenCode.
 | **Go deeper only when needed** | Preview an opt-in live connection test, or review an eligible low-risk repair before applying it. |
 | **Stay in control** | MCPMender runs locally, redacts common secrets in reports, backs up changed files, and records rollback information. |
 
-**Choose your path:** [Download the Desktop app](https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.4) ·
+**Choose your path:** [Download the Desktop app](https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.5) ·
 [Use the command line](#command-line-installation) ·
 [Read the offline handbook](docs/MCPMender-Handbook.html) ·
 [Report a problem](https://github.com/beyond5525/MCPMender/issues)
@@ -180,10 +176,10 @@ report after removing private paths and credentials.
 ## Command-line installation
 
 The release tarball requires Node.js 20.3 or newer. Download
-`CLI/mcpmender-0.3.0-beta.4.tgz` from the release archive, then run:
+`CLI/mcpmender-0.3.0-beta.5.tgz` from the release archive, then run:
 
 ```sh
-npm install --global ./mcpmender-0.3.0-beta.4.tgz
+npm install --global ./mcpmender-0.3.0-beta.5.tgz
 mcpmender --version
 mcpmender --help
 ```

@@ -4,28 +4,28 @@ Use this checklist for every public MCPMender（协议修匠）release. Record f
 not assumptions. An unchecked item is a known release limitation and must be
 disclosed in the release notes.
 
-## 0.3.0-beta.4 release record
+## 0.3.0-beta.5 release record
 
 - Decision: **Ship**
 - Release scope: the locally signed Windows x64 portable client, the bundled
   cross-platform CLI tarball, source, documentation, checksums, notices, and
   SBOM. Linux and macOS Desktop artifacts may be added only after their native
   workflow jobs pass; they are not claimed by the local Windows archive.
-- Source identity: `v0.3.0-beta.4`; the packaging script requires the clean
+- Source identity: `v0.3.0-beta.5`; the packaging script requires the clean
   tagged commit and rejects a missing or non-Ship decision.
-- Confirmed before packaging on Windows x64: 79 automated tests, all workspace
-  type checks and production builds, production dependency audit, PowerShell
-  parsing, actionlint, main/help real Electron captures in the selected
-  language, and clean process exit.
-- Confirmed by the packaging gate: fresh Desktop and CLI builds, packed CLI
-  installation under Node.js 20.20.2, main/help smoke captures from the final
-  EXE, Authenticode signer/certificate/thumbprint consistency, inner SHA-256
-  manifest, exact ZIP entry hashes, SBOM contents, and adjacent ZIP checksum.
-- Confirmed in GitHub-hosted native jobs before versioning: tests and final
-  package smoke checks on Windows x64, Linux x64, macOS arm64, and macOS x64,
-  including launch, localized main/help screenshots, process shutdown,
+- Confirmed before packaging on Windows x64: lockfile installation, 82
+  automated tests, all workspace type checks and production builds, production
+  dependency audit with no known vulnerabilities, PowerShell parsing,
+  actionlint, and release-version consistency.
+- Required packaging gate: fresh Desktop and CLI builds, packed CLI
+  installation, main/help smoke captures from the final EXE, Authenticode
+  signer/certificate/thumbprint consistency, inner SHA-256 manifest, exact ZIP
+  entry hashes, SBOM contents, and adjacent ZIP checksum.
+- Required public-upload gate: the tagged GitHub-hosted jobs must pass tests and
+  final package smoke checks on Windows x64, Linux x64, macOS arm64, and macOS
+  x64, including launch, localized main/help screenshots, process shutdown,
   macOS ad-hoc signature verification, AppImage and tarball execution, and
-  packaged CLI validation.
+  packaged CLI validation under Node.js 20.
 - Intentionally skipped locally: public npm registry publication,
   SmartScreen/Gatekeeper reputation, and clean-machine quick start.
 - Publication policy: GitHub Actions Windows artifacts are intentionally
@@ -162,15 +162,18 @@ For each platform, record the operating-system version and artifact name.
 
 ## Release decision
 
-- Release version: `0.3.0-beta.4`
-- Release commit/tag: `v0.3.0-beta.4`
-- Date: 2026-07-30
-- Platforms actually validated: Windows x64 Desktop; Linux x64 Desktop;
-  macOS arm64 and x64 Desktop; CLI on Windows x64 with Node.js 20.20.2;
-  cross-platform core behavior in automated tests.
+- Release version: `0.3.0-beta.5`
+- Release commit/tag: `v0.3.0-beta.5`
+- Date: 2026-08-02
+- Platforms validated before tagging: Windows x64 source, tests, type checks,
+  and production builds; Windows, macOS, and Linux VSCodium path rules in
+  automated tests. Final native artifact validation is a mandatory upload gate
+  and is recorded in the GitHub Release notes.
 - Validation intentionally skipped: public npm publication, SmartScreen and
   Gatekeeper reputation, and a separate clean-machine quick start.
 - Known limitations disclosed: self-signed Windows identity, macOS ad-hoc
   signing, no npm registry package yet, client-managed VS Code inputs/socket
-  transports, and inactive VS Code Profiles are not executed automatically.
+  transports, and inactive VS Code/VSCodium Profiles are not executed
+  automatically. VSCodium support in this release covers the standard
+  user-level configuration path, not separate named Profile discovery.
 - Approver: Codex automated release audit for the user.

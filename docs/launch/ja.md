@@ -6,13 +6,13 @@
 
 リポジトリ：https://github.com/beyond5525/MCPMender
 
-ダウンロード：https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.4
+ダウンロード：https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.5
 
 ## 短文
 
 **MCP Server が表示されない、または起動しない原因を MCPMender で調べられます。**
 
-MCPMender は、Codex、Claude Desktop、Cursor、VS Code、Gemini CLI、
+MCPMender は、Codex、Claude Desktop、Cursor、VS Code、VSCodium、Gemini CLI、
 OpenCode で利用する MCP 設定を診断し、安全な修復を支援するローカル動作の
 オープンソースツールです。
 
@@ -45,8 +45,8 @@ MCPMender は、設定ファイルをターミナルで手作業で調査する�
 現在のパブリックベータには次の機能があります。
 
 - Desktop アプリケーションと `mcpmender` コマンドライン。
-- Codex、Claude Desktop、Cursor、VS Code、Gemini CLI、OpenCode の MCP
-  設定を検出。
+- Codex、Claude Desktop、Cursor、VS Code、VSCodium、Gemini CLI、OpenCode の
+  MCP 設定を検出。
 - 設定されたコマンドを起動せず、リモート MCP エンドポイントにも接続しない
   読み取り専用の静的スキャン。
 - 明示的な確認後に stdio または Streamable HTTP で実際の MCP initialize
@@ -62,7 +62,7 @@ MCPMender は、設定ファイルをターミナルで手作業で調査する�
 コマンドが安全だと保証したりはしません。ライブ検査では設定されたコードの
 実行やリモート接続が発生するため、実行前に境界を説明して確認を求めます。
 
-現在のバージョンは 0.3.0-beta.4 で、安定版 1.0 ではありません。Windows 版は
+現在のバージョンは 0.3.0-beta.5 で、安定版 1.0 ではありません。Windows 版は
 自己署名証明書を使用する場合があり、macOS 版はアドホック署名で公証されて
 いない場合があります。ダウンロードを実行する前にリリースノートを読み、
 公開されている SHA-256 チェックサムを確認してください。
@@ -71,7 +71,7 @@ MCPMender は、設定ファイルをターミナルで手作業で調査する�
 https://github.com/beyond5525/MCPMender
 
 ダウンロード：
-https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.4
+https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.5
 
 再現可能で機密情報を除去した MCP 設定の問題や、各 OS 固有の動作に関する
 フィードバックを歓迎します。認証情報や個人のパスを含む設定ファイルをそのまま

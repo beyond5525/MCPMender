@@ -1,6 +1,6 @@
 {
   "name": "mcpmender-workspace",
-  "version": "0.3.0-beta.4",
+  "version": "0.3.0-beta.5",
   "private": true,
   "description": "MCPMender (协议修匠) — local MCP diagnostics and safe repair for AI developer tools.",
   "license": "Apache-2.0",

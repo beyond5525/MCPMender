@@ -5,12 +5,20 @@ All notable changes to MCPMender（协议修匠）are recorded here.
 The project follows semantic versioning where practical. Versions containing
 `beta` are pre-release builds and may change before v1.0.
 
-## [Unreleased]
+## [0.3.0-beta.5] - 2026-08-02
 
 ### Added
 
 - Discover VSCodium user-level MCP configuration files automatically on
   Windows, macOS, and Linux while reusing the existing VS Code diagnostics.
+  Thanks to @adity982 for the initial implementation.
+
+### Documentation
+
+- Documented the AppImage extract-and-run fallback for Linux systems without
+  FUSE in English, Simplified Chinese, and Japanese.
+- Added a trilingual product gallery and improved project discovery and
+  installation guidance without claiming that the CLI is published to npm.
 
 ## [0.3.0-beta.4] - 2026-07-30
 
