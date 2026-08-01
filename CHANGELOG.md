@@ -5,6 +5,13 @@ All notable changes to MCPMender（协议修匠）are recorded here.
 The project follows semantic versioning where practical. Versions containing
 `beta` are pre-release builds and may change before v1.0.
 
+## [Unreleased]
+
+### Added
+
+- Discover VSCodium user-level MCP configuration files automatically on
+  Windows, macOS, and Linux while reusing the existing VS Code diagnostics.
+
 ## [0.3.0-beta.4] - 2026-07-30
 
 ### Fixed

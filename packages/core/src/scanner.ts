@@ -22,6 +22,35 @@ import type {
   ServerDefinition
 } from "./types.js";
 
+export function resolveVsCodeFamilyUserRoots(
+  platform: NodeJS.Platform,
+  home: string,
+  appData: string,
+  xdgConfig: string
+): {
+  vscode: string;
+  vscodeInsiders: string;
+  vscodium: string;
+} {
+  const platformPath = platform === "win32" ? path.win32 : path.posix;
+  const applicationSupport =
+    platform === "darwin"
+      ? platformPath.join(home, "Library", "Application Support")
+      : platform === "win32"
+        ? appData
+        : xdgConfig;
+
+  return {
+    vscode: platformPath.join(applicationSupport, "Code", "User"),
+    vscodeInsiders: platformPath.join(
+      applicationSupport,
+      "Code - Insiders",
+      "User"
+    ),
+    vscodium: platformPath.join(applicationSupport, "VSCodium", "User")
+  };
+}
+
 async function defaultCandidates(
   options: ScanOptions
 ): Promise<ConfigCandidate[]> {
@@ -37,42 +66,11 @@ async function defaultCandidates(
   const xdgConfig =
     process.env.XDG_CONFIG_HOME ?? platformPath.join(home, ".config");
   const project = options.projectDir ?? process.cwd();
-  const vscodeUserRoot =
-    platform === "darwin"
-      ? platformPath.join(
-          home,
-          "Library",
-          "Application Support",
-          "Code",
-          "User"
-        )
-      : platform === "win32"
-        ? platformPath.join(appData, "Code", "User")
-        : platformPath.join(xdgConfig, "Code", "User");
-  const vscodeInsidersUserRoot =
-    platform === "darwin"
-      ? platformPath.join(
-          home,
-          "Library",
-          "Application Support",
-          "Code - Insiders",
-          "User"
-        )
-      : platform === "win32"
-        ? platformPath.join(appData, "Code - Insiders", "User")
-        : platformPath.join(xdgConfig, "Code - Insiders", "User");
-  const vscodiumUserRoot =
-    platform === "darwin"
-      ? platformPath.join(
-          home,
-          "Library",
-          "Application Support",
-          "VSCodium",
-          "User"
-        )
-      : platform === "win32"
-        ? platformPath.join(appData, "VSCodium", "User")
-        : platformPath.join(xdgConfig, "VSCodium", "User");
+  const {
+    vscode: vscodeUserRoot,
+    vscodeInsiders: vscodeInsidersUserRoot,
+    vscodium: vscodiumUserRoot
+  } = resolveVsCodeFamilyUserRoots(platform, home, appData, xdgConfig);
   const claudePath =
     platform === "win32"
       ? platformPath.join(

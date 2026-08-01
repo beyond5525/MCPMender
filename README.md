@@ -10,7 +10,7 @@ MCPMender（协议修匠）是一款在本地运行的 MCP 配置诊断与安全
 
 It helps people find out why an MCP server is not visible, will not start, or
 cannot complete an MCP handshake in Codex, Claude Desktop, Cursor, VS Code,
-Gemini CLI, and OpenCode.
+VSCodium, Gemini CLI, and OpenCode.
 
 <p align="center">
   <a href="https://github.com/beyond5525/MCPMender/releases/tag/v0.3.0-beta.4"><strong>Download MCPMender 0.3.0-beta.4 · 下载公开测试版 · パブリックベータをダウンロード →</strong></a>
@@ -21,6 +21,10 @@ Gemini CLI, and OpenCode.
 > **Release status:** `0.3.0-beta.4`. This is a public beta, not a stable v1.0
 > release. Keep a copy of important configuration and review every repair
 > preview before applying it.
+>
+> **Development note:** VSCodium user-level discovery is available on `main`
+> and is planned for the next beta. The `0.3.0-beta.4` downloads do not include
+> it yet.
 
 ## MCPMender in 30 seconds
 
@@ -45,10 +49,10 @@ Gemini CLI, and OpenCode.
 ### English
 
 MCPMender finds MCP configuration problems in Codex, Claude Desktop, Cursor,
-VS Code, Gemini CLI, and OpenCode. Start with a read-only scan, optionally run
-a real connection check, preview eligible low-risk repairs, and use automatic
-backups and rollback when a change is applied. Everything runs locally, and
-reports redact common secret values.
+VS Code, VSCodium, Gemini CLI, and OpenCode. Start with a read-only scan,
+optionally run a real connection check, preview eligible low-risk repairs, and
+use automatic backups and rollback when a change is applied. Everything runs
+locally, and reports redact common secret values.
 
 | Diagnostics and safe repair | Trilingual offline handbook |
 |---|---|
@@ -56,8 +60,8 @@ reports redact common secret values.
 
 ### 简体中文
 
-协议修匠可以检查 Codex、Claude Desktop、Cursor、VS Code、Gemini CLI 和
-OpenCode 的 MCP 配置问题。先进行完全只读的普通检测，需要时再执行真实连接
+协议修匠可以检查 Codex、Claude Desktop、Cursor、VS Code、VSCodium、Gemini CLI
+和 OpenCode 的 MCP 配置问题。先进行完全只读的普通检测，需要时再执行真实连接
 检查；符合安全条件的问题可以预览后一键修复，并自动备份、支持回滚。所有处理
 都在本地完成，导出的报告会隐藏常见密钥和敏感值。
 
@@ -67,7 +71,7 @@ OpenCode 的 MCP 配置问题。先进行完全只读的普通检测，需要时
 
 ### 日本語
 
-MCPMender は Codex、Claude Desktop、Cursor、VS Code、Gemini CLI、
+MCPMender は Codex、Claude Desktop、Cursor、VS Code、VSCodium、Gemini CLI、
 OpenCode の MCP 設定を検査します。最初は読み取り専用で診断し、必要な場合
 だけ実際の接続確認を実行できます。安全な修復候補は変更内容を確認してから
 適用でき、自動バックアップとロールバックにも対応します。処理はローカルで
@@ -232,12 +236,13 @@ To uninstall the portable Desktop, close MCPMender and delete its program
 folder. Delete the adjacent `data` directory only if you also want to remove
 preferences, logs, and rollback backups. The CLI can be removed with
 `npm uninstall --global mcpmender`; uninstalling either interface does not
-delete MCP configuration files owned by Codex, Claude, Cursor, VS Code, Gemini
-CLI, or OpenCode. If the program folder was not writable, MCPMender uses a
-fallback data location and shows its exact path in the interface. Note that path
-before closing the app, then delete it manually after MCPMender exits if you
-want a complete data removal. If the program was already deleted, extract and
-run the same release once more to display the fallback path.
+delete MCP configuration files owned by Codex, Claude, Cursor, VS Code,
+VSCodium, Gemini CLI, or OpenCode. If the program folder was not writable,
+MCPMender uses a fallback data location and shows its exact path in the
+interface. Note that path before closing the app, then delete it manually after
+MCPMender exits if you want a complete data removal. If the program was already
+deleted, extract and run the same release once more to display the fallback
+path.
 
 ## Privacy and security
 

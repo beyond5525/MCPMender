@@ -20,6 +20,7 @@ import {
   type ConfigCandidate,
   type ServerDefinition
 } from "./index.js";
+import { resolveVsCodeFamilyUserRoots } from "./scanner.js";
 
 const originalXdgConfigHome = process.env.XDG_CONFIG_HOME;
 
@@ -471,6 +472,48 @@ env_http_headers = { X_Dynamic = "MCPMENDER_CODEX_DYNAMIC" }
 });
 
 describe("user and project discovery", () => {
+  it("resolves VS Code family user paths on every supported platform", () => {
+    expect(
+      resolveVsCodeFamilyUserRoots(
+        "win32",
+        "C:\\Users\\example",
+        "C:\\Users\\example\\AppData\\Roaming",
+        ""
+      )
+    ).toEqual({
+      vscode: "C:\\Users\\example\\AppData\\Roaming\\Code\\User",
+      vscodeInsiders:
+        "C:\\Users\\example\\AppData\\Roaming\\Code - Insiders\\User",
+      vscodium: "C:\\Users\\example\\AppData\\Roaming\\VSCodium\\User"
+    });
+    expect(
+      resolveVsCodeFamilyUserRoots(
+        "darwin",
+        "/Users/example",
+        "",
+        "/Users/example/.config"
+      )
+    ).toEqual({
+      vscode: "/Users/example/Library/Application Support/Code/User",
+      vscodeInsiders:
+        "/Users/example/Library/Application Support/Code - Insiders/User",
+      vscodium:
+        "/Users/example/Library/Application Support/VSCodium/User"
+    });
+    expect(
+      resolveVsCodeFamilyUserRoots(
+        "linux",
+        "/home/example",
+        "",
+        "/custom/xdg"
+      )
+    ).toEqual({
+      vscode: "/custom/xdg/Code/User",
+      vscodeInsiders: "/custom/xdg/Code - Insiders/User",
+      vscodium: "/custom/xdg/VSCodium/User"
+    });
+  });
+
   it("discovers VS Code, VSCodium, and profile configs on every platform", async () => {
     // Profile discovery reads real directories. Windows separators cannot be
     // represented as directory boundaries on a POSIX filesystem, so each
@@ -527,6 +570,7 @@ describe("user and project discovery", () => {
           : platform === "win32"
             ? platformPath.join(appData, "VSCodium", "User")
             : platformPath.join(xdg, "VSCodium", "User");
+      const vscodiumPath = platformPath.join(vscodiumRoot, "mcp.json");
       const expected = [
         platformPath.join(stableRoot, "mcp.json"),
         platformPath.join(stableRoot, "profiles", "stable-profile", "mcp.json"),
@@ -537,21 +581,31 @@ describe("user and project discovery", () => {
           "insiders-profile",
           "mcp.json"
         ),
-        platformPath.join(vscodiumRoot, "mcp.json")
+        vscodiumPath
       ];
       for (const configPath of expected) {
         await mkdir(path.dirname(configPath), { recursive: true });
+        const isProfile = configPath.includes(
+          `${platformPath.sep}profiles${platformPath.sep}`
+        );
         await writeFile(
           configPath,
           JSON.stringify({
-            servers: configPath.includes(`${platformPath.sep}profiles${platformPath.sep}`)
+            servers: isProfile
               ? {
                   profileServer: {
                     type: "stdio",
                     command: process.execPath
                   }
                 }
-              : {}
+              : configPath === vscodiumPath
+                ? {
+                    vscodiumServer: {
+                      type: "stdio",
+                      command: process.execPath
+                    }
+                  }
+                : {}
           })
         );
       }
@@ -569,6 +623,17 @@ describe("user and project discovery", () => {
         expect(found.filter((candidatePath) => candidatePath === configPath))
           .toHaveLength(1);
       }
+      const vscodium = report.clients.find(
+        (client) => client.configPath === vscodiumPath
+      );
+      expect(vscodium).toMatchObject({
+        clientId: "vscode",
+        displayName: "VSCodium (User)",
+        configFound: true
+      });
+      expect(vscodium?.servers.map((server) => server.name)).toEqual([
+        "vscodiumServer"
+      ]);
       const profileServers = report.clients
         .filter((client) => client.displayName.includes("(Profile "))
         .flatMap((client) => client.servers);
@@ -579,6 +644,38 @@ describe("user and project discovery", () => {
         )
       ).toBe(true);
     }
+  });
+
+  it("silently ignores a missing VSCodium user configuration", async () => {
+    const root = await mkdtemp(
+      path.join(os.tmpdir(), "mcpmender-vscodium-missing-")
+    );
+    const platform: "win32" | "darwin" | "linux" =
+      process.platform === "win32" || process.platform === "darwin"
+        ? process.platform
+        : "linux";
+    const platformPath = platform === "win32" ? path.win32 : path.posix;
+    const normalizedRoot =
+      platform === "win32" ? root : root.replaceAll("\\", "/");
+    const home = platformPath.join(normalizedRoot, "home");
+    const appData = platformPath.join(normalizedRoot, "appdata");
+    process.env.XDG_CONFIG_HOME = platformPath.join(home, ".config");
+
+    const report = await scanMcpConfigurations({
+      platform,
+      homeDir: home,
+      appDataDir: appData,
+      projectDir: platformPath.join(normalizedRoot, "project")
+    });
+
+    expect(
+      report.clients.some((client) => client.displayName.includes("VSCodium"))
+    ).toBe(false);
+    expect(
+      report.findings.some((finding) =>
+        finding.clientName.includes("VSCodium")
+      )
+    ).toBe(false);
   });
 
   it("accepts VS Code socket URLs and numeric environment values", async () => {
